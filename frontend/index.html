@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Aventure Objet Oracle</title>
+    <link rel="stylesheet" href="/styles/main.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hud">
+        <div>
+          <p class="eyebrow">Île des Objets Oracle</p>
+          <h1>Aventure Objet Oracle</h1>
+        </div>
+        <div id="oracle-warning" class="warning" hidden>Oracle est obligatoire pour jouer.</div>
+      </header>
+
+      <section class="game-layout">
+        <div class="game-stage">
+          <canvas id="game" width="960" height="640" aria-label="Jeu Île des Objets Oracle"></canvas>
+          <div id="login" class="login">
+            <form id="login-form">
+              <p class="eyebrow">Multijoueur Oracle</p>
+              <h2>Entre ton pseudo</h2>
+              <input id="pseudo" name="pseudo" autocomplete="nickname" minlength="3" maxlength="24" required>
+              <button type="submit">Rejoindre le monde</button>
+            </form>
+          </div>
+        </div>
+
+        <aside class="panel">
+          <p class="eyebrow">Journal</p>
+          <h2 id="quest-title">Connexion Oracle</h2>
+          <p id="quest-text">Entre ton pseudo. Le joueur, l'inventaire et les quêtes sont chargés depuis Oracle.</p>
+          <pre id="sql-box"></pre>
+          <div id="progress-list" class="progress-list"></div>
+        </aside>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

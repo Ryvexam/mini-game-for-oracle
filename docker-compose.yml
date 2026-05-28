@@ -1,0 +1,33 @@
+services:
+  oracle:
+    image: gvenzl/oracle-free:23-slim
+    container_name: oracle_object_adventure_db
+    ports:
+      - "127.0.0.1:1521:1521"
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_SYS_PASSWORD}
+      APP_USER: ${ORACLE_USER:-oracle_game}
+      APP_USER_PASSWORD: ${ORACLE_PASSWORD}
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 20s
+      timeout: 10s
+      retries: 20
+
+  app:
+    build: .
+    depends_on:
+      oracle:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      ORACLE_DSN: oracle:1521/FREEPDB1
+      ORACLE_USER: ${ORACLE_USER:-oracle_game}
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD}
+      ALLOWED_ORIGINS: http://127.0.0.1:8000,http://localhost:8000
+
+volumes:
+  oracle-data:

@@ -1,0 +1,6 @@
+{
+  "id": "collection_keeper",
+  "displayName": "Gardien des Collections",
+  "description": "Familier gardien des VARRAY et des tables imbriquees.",
+  "spritesheetPath": "spritesheet.webp"
+}

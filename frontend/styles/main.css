@@ -1,0 +1,191 @@
+:root {
+  --ink: #17221f;
+  --paper: #fff8e8;
+  --panel: #f5e4bd;
+  --line: #27342f;
+  --teal: #245f56;
+  --red: #963830;
+  --gold: #d29c3a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  background:
+    linear-gradient(90deg, rgba(36, 95, 86, 0.12) 1px, transparent 1px),
+    linear-gradient(rgba(150, 56, 48, 0.08) 1px, transparent 1px),
+    #ede0c2;
+  background-size: 32px 32px;
+  font-family: "Avenir Next", "Trebuchet MS", sans-serif;
+}
+
+.shell {
+  width: min(1340px, calc(100vw - 28px));
+  margin: 0 auto;
+  padding: 24px 0 32px;
+}
+
+.hud {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+.eyebrow {
+  margin: 0 0 5px;
+  color: var(--red);
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 0;
+  font-family: Georgia, serif;
+  font-size: clamp(2.1rem, 4vw, 4rem);
+  line-height: 0.95;
+}
+
+.warning {
+  max-width: 360px;
+  border: 2px solid var(--line);
+  background: #f2d1c6;
+  box-shadow: 5px 5px 0 var(--line);
+  padding: 12px;
+  font-weight: 800;
+}
+
+.game-layout {
+  display: grid;
+  grid-template-columns: 960px minmax(280px, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.game-stage,
+.panel {
+  border: 3px solid var(--line);
+  background: var(--paper);
+  box-shadow: 12px 12px 0 rgba(23, 34, 31, 0.18);
+}
+
+.game-stage {
+  position: relative;
+  width: 960px;
+  height: 640px;
+}
+
+canvas {
+  width: 960px;
+  height: 640px;
+  image-rendering: pixelated;
+}
+
+.login {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(23, 34, 31, 0.52);
+}
+
+.login[hidden] {
+  display: none;
+}
+
+.login form {
+  width: 360px;
+  border: 3px solid var(--line);
+  background: var(--paper);
+  box-shadow: 8px 8px 0 rgba(23, 34, 31, 0.24);
+  padding: 22px;
+}
+
+.login input,
+.login button {
+  width: 100%;
+  border: 2px solid var(--line);
+  padding: 12px;
+  font: inherit;
+  font-weight: 800;
+}
+
+.login button {
+  margin-top: 12px;
+  background: var(--gold);
+  cursor: pointer;
+}
+
+.panel {
+  min-height: 640px;
+  padding: 18px;
+}
+
+.panel h2 {
+  margin-bottom: 10px;
+  font-family: Georgia, serif;
+  font-size: 1.45rem;
+}
+
+.panel p {
+  color: #4f5b55;
+  line-height: 1.45;
+}
+
+pre {
+  min-height: 190px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border: 2px solid var(--line);
+  background: #18231f;
+  color: #f6dfac;
+  padding: 14px;
+  line-height: 1.45;
+}
+
+.progress-list {
+  display: grid;
+  gap: 8px;
+}
+
+.progress-item {
+  border-left: 5px solid #b8a685;
+  background: #fffdf5;
+  padding: 10px;
+  font-weight: 700;
+}
+
+.progress-item.done {
+  border-color: var(--gold);
+  background: #f7e6bd;
+}
+
+@media (max-width: 1260px) {
+  .game-layout {
+    grid-template-columns: 1fr;
+  }
+
+  canvas,
+  .game-stage {
+    width: 100%;
+    height: auto;
+  }
+
+  .panel {
+    min-height: auto;
+  }
+}

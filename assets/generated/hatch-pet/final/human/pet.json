@@ -1,0 +1,6 @@
+{
+  "id": "human",
+  "displayName": "Sous-type Human",
+  "description": "Familier humain qui explique l'heritage et les methodes redefinies.",
+  "spritesheetPath": "spritesheet.webp"
+}

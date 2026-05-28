@@ -1,0 +1,43 @@
+{
+  "characters_concept.png": {
+    "description": "3x3 generated character concept sheet.",
+    "assets": [
+      "player character",
+      "LivingBeing NPC",
+      "Human NPC",
+      "Monkey NPC",
+      "Lynx NPC",
+      "Oracle Sage NPC",
+      "Ref Spirit NPC",
+      "Collection Keeper NPC",
+      "Final Guardian NPC"
+    ],
+    "prompt": "Create a coherent 3x3 concept sheet of nine cute readable fantasy-tech animal/NPC characters for Oracle Object Island."
+  },
+  "world_concept.png": {
+    "description": "Generated terrain and object concept sheet.",
+    "assets": [
+      "grass tile",
+      "dirt tile",
+      "stone tile",
+      "water tile",
+      "path tile",
+      "tree object",
+      "rock object",
+      "Type Forge building/object",
+      "REF Bridge object",
+      "Collection Chest object",
+      "Final Gate object"
+    ],
+    "prompt": "Create a coherent concept sheet for Oracle Object Island terrain tiles and map objects."
+  },
+  "ui_concept.png": {
+    "description": "Generated UI concept sheet.",
+    "assets": [
+      "dialogue box UI",
+      "Oracle icon UI",
+      "interaction prompt UI"
+    ],
+    "prompt": "Create three coherent fantasy-tech Oracle Object Island UI assets with no text."
+  }
+}

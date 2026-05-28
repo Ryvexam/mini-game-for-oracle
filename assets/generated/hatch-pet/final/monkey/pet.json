@@ -1,0 +1,6 @@
+{
+  "id": "monkey",
+  "displayName": "Sous-type Monkey",
+  "description": "Familier singe mobile pour les lecons de polymorphisme.",
+  "spritesheetPath": "spritesheet.webp"
+}

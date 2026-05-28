@@ -1,0 +1,6 @@
+{
+  "id": "living_being",
+  "displayName": "LivingBeing",
+  "description": "Familier supertype qui represente la racine commune des etres vivants.",
+  "spritesheetPath": "spritesheet.webp"
+}

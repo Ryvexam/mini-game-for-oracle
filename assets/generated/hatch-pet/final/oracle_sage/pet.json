@@ -1,0 +1,6 @@
+{
+  "id": "oracle_sage",
+  "displayName": "Sage Oracle",
+  "description": "Familier sage qui enseigne les exemples SQL objet Oracle.",
+  "spritesheetPath": "spritesheet.webp"
+}

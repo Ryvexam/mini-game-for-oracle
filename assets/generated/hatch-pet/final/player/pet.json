@@ -1,0 +1,6 @@
+{
+  "id": "player",
+  "displayName": "Explorateur de l'Ile",
+  "description": "Familier explorateur qui guide le joueur sur l'Ile des Objets Oracle.",
+  "spritesheetPath": "spritesheet.webp"
+}
