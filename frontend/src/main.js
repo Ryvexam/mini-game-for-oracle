@@ -50,7 +50,7 @@ loginForm.addEventListener("submit", async (event) => {
     state = createInitialState({ pseudo, assets });
     const player = await createSession(pseudo, null);
     state.player = { ...player, direction: "down", frame: 0, animationMs: 0 };
-    await refreshWorld();
+    await refreshWorld({ preserveLocalPosition: false });
     login.hidden = true;
   } catch (error) {
     warning.hidden = false;
@@ -58,18 +58,11 @@ loginForm.addEventListener("submit", async (event) => {
   }
 });
 
-async function refreshWorld() {
+async function refreshWorld(options = {}) {
   if (!state?.player) return;
   const chunk = currentChunk(state.player);
-  const previousPlayer = state.player;
   const world = await fetchWorld(state.pseudo, chunk.x, chunk.y);
-  applyWorldState(state, world);
-  state.player = {
-    ...state.player,
-    direction: previousPlayer.direction ?? "down",
-    frame: previousPlayer.frame ?? 0,
-    animationMs: previousPlayer.animationMs ?? 0,
-  };
+  applyWorldState(state, world, options);
   syncPanel();
 }
 
@@ -120,6 +113,7 @@ function syncPanel() {
 }
 
 window.addEventListener("keydown", (event) => {
+  if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
   if (event.key.toLowerCase() === "e") handleAction();
   if (["1", "2", "3"].includes(event.key)) handleSqlAnswer(Number(event.key) - 1);
 });
@@ -133,9 +127,9 @@ function tick(now) {
     state.nearbyInteraction = findInteraction(state);
     state.syncMs += delta;
     state.moveSyncMs += delta;
-    if (state.moveSyncMs > 650) {
+    if (state.moveSyncMs > 300) {
       state.moveSyncMs = 0;
-      saveMove(state.pseudo, state.player.x, state.player.y).catch(() => null);
+      syncPlayerPosition();
     }
     if (state.syncMs > 1800) {
       state.syncMs = 0;
@@ -150,3 +144,30 @@ function tick(now) {
 }
 
 requestAnimationFrame(tick);
+
+function syncPlayerPosition() {
+  if (!state?.player || state.moveInFlight || !state.positionDirty) return;
+  const x = Math.round(state.player.x);
+  const y = Math.round(state.player.y);
+  const last = state.lastSyncedPosition;
+  if (last && Math.abs(last.x - x) < 2 && Math.abs(last.y - y) < 2) {
+    state.positionDirty = false;
+    return;
+  }
+
+  state.moveInFlight = true;
+  saveMove(state.pseudo, x, y)
+    .then(() => {
+      state.lastSyncedPosition = { x, y };
+      const currentX = Math.round(state.player.x);
+      const currentY = Math.round(state.player.y);
+      state.positionDirty = Math.abs(currentX - x) >= 2 || Math.abs(currentY - y) >= 2;
+      state.oracleError = null;
+    })
+    .catch((error) => {
+      state.oracleError = error.message;
+    })
+    .finally(() => {
+      state.moveInFlight = false;
+    });
+}

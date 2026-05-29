@@ -2,6 +2,8 @@ import { PLAYER_SPEED } from "./constants.js";
 
 export function updatePlayer(state, input, delta) {
   if (!state.player) return;
+  const previousX = state.player.x;
+  const previousY = state.player.y;
   let dx = 0;
   let dy = 0;
   if (input.isDown("left")) dx -= 1;
@@ -20,6 +22,9 @@ export function updatePlayer(state, input, delta) {
 
   state.player.x += dx * PLAYER_SPEED * delta;
   state.player.y += dy * PLAYER_SPEED * delta;
+  if (state.player.x !== previousX || state.player.y !== previousY) {
+    state.positionDirty = true;
+  }
 
   state.player.animationMs = (state.player.animationMs ?? 0) + delta;
   if (state.player.animationMs > 130) {

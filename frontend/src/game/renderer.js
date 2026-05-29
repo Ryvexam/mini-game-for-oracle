@@ -7,6 +7,8 @@ const TILE_BY_CODE = {
   w: "water",
   r: "rocky",
   f: "flower_grass",
+  v: "gravel",
+  d: "dirt",
 };
 
 export function render(ctx, state, assets) {

@@ -3,6 +3,7 @@ export function createInput() {
   const consumed = new Set();
 
   window.addEventListener("keydown", (event) => {
+    if (isTextInput(event.target)) return;
     const key = normalize(event.key);
     pressed.add(key);
     if (["up", "down", "left", "right", "interact"].includes(key)) {
@@ -11,6 +12,7 @@ export function createInput() {
   });
 
   window.addEventListener("keyup", (event) => {
+    if (isTextInput(event.target)) return;
     pressed.delete(normalize(event.key));
   });
 
@@ -26,6 +28,10 @@ export function createInput() {
       return true;
     },
   };
+}
+
+function isTextInput(target) {
+  return target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
 }
 
 function normalize(key) {

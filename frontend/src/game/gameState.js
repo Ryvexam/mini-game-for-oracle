@@ -15,11 +15,14 @@ export function createInitialState({ pseudo, assets }) {
     oracleError: null,
     syncMs: 0,
     moveSyncMs: 0,
+    positionDirty: false,
+    moveInFlight: false,
+    lastSyncedPosition: null,
   };
 }
 
-export function applyWorldState(state, world) {
-  state.player = world.player;
+export function applyWorldState(state, world, options = {}) {
+  state.player = mergeServerPlayer(state.player, world.player, options);
   state.otherPlayers = world.players ?? [];
   state.chunks = world.chunks ?? [];
   state.resources = state.chunks.flatMap((chunk) => chunk.resources ?? []);
@@ -27,8 +30,11 @@ export function applyWorldState(state, world) {
   state.quest = world.quest;
 }
 
-export function applyActionResult(state, result) {
-  state.player = result.player;
+export function applyActionResult(state, result, options = {}) {
+  state.player = mergeServerPlayer(state.player, result.player, {
+    preserveLocalPosition: true,
+    ...options,
+  });
   state.quest = result.quest;
   state.message = { text: result.message, ttl: 2600 };
 }
@@ -37,5 +43,27 @@ export function currentChunk(player) {
   return {
     x: Math.floor(player.x / 768),
     y: Math.floor(player.y / 768),
+  };
+}
+
+function mergeServerPlayer(localPlayer, serverPlayer, options = {}) {
+  const preserveLocalPosition = options.preserveLocalPosition ?? true;
+  if (!localPlayer || !preserveLocalPosition) {
+    return {
+      ...serverPlayer,
+      direction: localPlayer?.direction ?? "down",
+      frame: localPlayer?.frame ?? 0,
+      animationMs: localPlayer?.animationMs ?? 0,
+      moving: false,
+    };
+  }
+  return {
+    ...serverPlayer,
+    x: localPlayer.x,
+    y: localPlayer.y,
+    direction: localPlayer.direction ?? "down",
+    frame: localPlayer.frame ?? 0,
+    animationMs: localPlayer.animationMs ?? 0,
+    moving: localPlayer.moving ?? false,
   };
 }

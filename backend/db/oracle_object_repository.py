@@ -344,19 +344,54 @@ def generate_tiles(chunk_x: int, chunk_y: int) -> list[str]:
         for x in range(16):
             world_x = chunk_x * 16 + x
             world_y = chunk_y * 16 + y
-            value = deterministic_noise(world_x, world_y)
-            if abs(world_x) <= 2 or abs(world_y) <= 2:
-                row.append("p")
-            elif value % 19 == 0:
-                row.append("w")
-            elif value % 11 == 0:
-                row.append("r")
-            elif value % 7 == 0:
-                row.append("f")
-            else:
-                row.append("g")
+            row.append(tile_code_at(world_x, world_y))
         tiles.append("".join(row))
     return tiles
+
+
+def tile_code_at(world_x: int, world_y: int) -> str:
+    river_center = river_center_x(world_y)
+    river_distance = abs(world_x - river_center)
+    road_distance = min(abs(world_x), abs(world_y), abs(world_x - world_y // 2))
+    biome = biome_value(world_x, world_y)
+    detail = deterministic_noise(world_x, world_y)
+
+    if river_distance <= river_width(world_y):
+        return "w"
+    if river_distance <= river_width(world_y) + 1:
+        return "v"
+    if road_distance <= 1:
+        return "p"
+    if road_distance == 2:
+        return "d"
+    if biome > 72:
+        return "f" if detail % 7 == 0 else "g"
+    if biome < 22:
+        return "r" if detail % 5 else "v"
+    if detail % 31 == 0:
+        return "f"
+    return "g"
+
+
+def river_center_x(world_y: int) -> int:
+    return round(
+        18
+        + math.sin(world_y * 0.09) * 8
+        + math.sin(world_y * 0.023 + 1.7) * 22
+        + math.sin(world_y * 0.011 - 0.4) * 34
+    )
+
+
+def river_width(world_y: int) -> int:
+    return 1 + (deterministic_noise(37, world_y // 8) % 2)
+
+
+def biome_value(world_x: int, world_y: int) -> int:
+    coarse_x = math.floor(world_x / 10)
+    coarse_y = math.floor(world_y / 10)
+    local = deterministic_noise(coarse_x, coarse_y) % 100
+    neighbor = deterministic_noise(coarse_x + 1, coarse_y - 1) % 100
+    return (local * 3 + neighbor) // 4
 
 
 def get_resources_for_chunk(chunk_x: int, chunk_y: int) -> list[ResourceNode]:
@@ -427,19 +462,50 @@ def ensure_generated_resources(chunk_x: int, chunk_y: int) -> None:
 
 def generated_resources(chunk_x: int, chunk_y: int) -> list[ResourceNode]:
     nodes = []
-    for index in range(5):
-        seed = deterministic_noise(chunk_x * 31 + index, chunk_y * 29 - index)
-        kind = ["tree", "rock", "ore"][seed % 3]
-        nodes.append(
-            ResourceNode(
-                id=f"gen-{chunk_x}-{chunk_y}-{index}",
-                kind=kind,
-                x=chunk_x * 768 + 90 + (seed % 560),
-                y=chunk_y * 768 + 120 + ((seed // 5) % 520),
-                amount=1,
+    origin_tile_x = chunk_x * 16
+    origin_tile_y = chunk_y * 16
+    for tile_y in range(16):
+        for tile_x in range(16):
+            world_x = origin_tile_x + tile_x
+            world_y = origin_tile_y + tile_y
+            tile = tile_code_at(world_x, world_y)
+            seed = deterministic_noise(world_x, world_y)
+            kind = resource_kind_for_tile(tile, world_x, world_y, seed)
+            if kind is None:
+                continue
+            nodes.append(
+                ResourceNode(
+                    id=f"gen-{chunk_x}-{chunk_y}-{tile_x}-{tile_y}",
+                    kind=kind,
+                    x=world_x * 48 + 8 + (seed % 17),
+                    y=world_y * 48 + 10 + ((seed // 11) % 15),
+                    amount=resource_amount(kind, seed),
+                )
             )
-        )
     return nodes
+
+
+def resource_kind_for_tile(tile: str, world_x: int, world_y: int, seed: int) -> str | None:
+    if tile == "w" or tile == "p" or tile == "d":
+        return None
+    forest_density = biome_value(world_x, world_y)
+    if forest_density > 72 and seed % 5 in {0, 1, 2}:
+        return "tree"
+    if forest_density > 58 and seed % 17 == 0:
+        return "tree"
+    if tile == "r" and seed % 4 == 0:
+        return "ore" if seed % 9 == 0 else "rock"
+    if tile == "v" and seed % 13 == 0:
+        return "rock"
+    return None
+
+
+def resource_amount(kind: str, seed: int) -> int:
+    if kind == "tree":
+        return 3 + seed % 5
+    if kind == "ore":
+        return 2 + seed % 4
+    return 2 + seed % 6
 
 
 def get_npcs_for_chunk(chunk_x: int, chunk_y: int) -> list[NpcState]:
