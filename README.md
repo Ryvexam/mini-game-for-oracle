@@ -4,6 +4,8 @@
 
 ### A multiplayer 2D sandbox powered entirely by Oracle Object-Relational features
 
+> ⚡ **Made in 5 hours** using **GPT-5.5 in Codex** and **Opus 4.8**.
+
 *All game logic lives in the database — object types, inheritance, polymorphism, packages, triggers and analytic views. Python only orchestrates.*
 
 <br>
