@@ -27,6 +27,11 @@ export function updatePlayer(state, input, delta) {
   }
 
   state.player.animationMs = (state.player.animationMs ?? 0) + delta;
+  if ((state.player.actionMs ?? 0) > 0) {
+    state.player.actionMs = Math.max(0, state.player.actionMs - delta);
+  } else {
+    state.player.action = null;
+  }
   if (state.player.animationMs > 130) {
     state.player.animationMs = 0;
     state.player.frame = state.player.moving ? ((state.player.frame ?? 0) + 1) % 4 : 0;

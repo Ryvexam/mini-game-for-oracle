@@ -13,8 +13,9 @@ import { applyActionResult, applyWorldState, createInitialState, currentChunk } 
 import { createInput } from "./game/input.js";
 import { formatCoordinates, renderMiniMap } from "./game/minimap.js";
 import { updatePlayer } from "./game/player.js";
-import { findInteraction } from "./game/quests.js";
+import { findInteraction, questTargetLabel } from "./game/quests.js";
 import { render } from "./game/renderer.js";
+import { connectPresence, sendPresence } from "./game/websocket.js";
 
 const canvas = document.querySelector("#game");
 const ctx = canvas.getContext("2d");
@@ -56,6 +57,7 @@ loginForm.addEventListener("submit", async (event) => {
     const player = await createSession(pseudo, null);
     state.player = { ...player, direction: "down", frame: 0, animationMs: 0 };
     await refreshWorld({ preserveLocalPosition: false });
+    connectPresence(state);
     login.hidden = true;
   } catch (error) {
     warning.hidden = false;
@@ -75,6 +77,10 @@ async function handleAction() {
   if (!state?.nearbyInteraction) return;
   const interaction = state.nearbyInteraction;
   try {
+    if (interaction.type === "resource") {
+      state.player.action = "mining";
+      state.player.actionMs = 1200;
+    }
     const result =
       interaction.type === "npc"
         ? await talk(state.pseudo, interaction.id)
@@ -101,7 +107,13 @@ function syncPanel() {
   if (!state?.player) return;
   questTitle.textContent = state.quest?.title ?? "Exploration";
   const step = state.quest?.steps?.[state.quest.step_index];
-  questText.textContent = step?.text ?? "Explore le monde, récolte des ressources et parle aux PNJ.";
+  const target = questTargetLabel(state);
+  questText.textContent = [
+    step?.text ?? "Explore le monde, récolte des ressources et parle aux PNJ.",
+    target,
+  ]
+    .filter(Boolean)
+    .join(" ");
   sqlBox.textContent = state.quest?.sql_challenge?.sql_code ?? "Aucune question SQL active.";
   progressList.innerHTML = "";
   coords.textContent = formatCoordinates(state.player);
@@ -133,9 +145,14 @@ function tick(now) {
     state.nearbyInteraction = findInteraction(state);
     state.syncMs += delta;
     state.moveSyncMs += delta;
+    state.presenceSyncMs += delta;
     if (state.moveSyncMs > 300) {
       state.moveSyncMs = 0;
       syncPlayerPosition();
+    }
+    if (state.presenceSyncMs > 120) {
+      state.presenceSyncMs = 0;
+      sendPresence(state);
     }
     if (state.syncMs > 1800) {
       state.syncMs = 0;

@@ -66,8 +66,12 @@ HATCH_PETS = [
     "final_guardian",
 ]
 
-PET_ATLAS_ASSETS = [
-    f"assets/generated/raw/pet_atlases/{pet_id}_grid.png" for pet_id in HATCH_PETS
+PET_ATLAS_ASSETS = [f"assets/generated/raw/pet_atlases/{pet_id}_grid.png" for pet_id in HATCH_PETS]
+
+MINING_ASSETS = [
+    "assets/generated/raw/player_mining_concept.png",
+    *[f"assets/generated/raw/pet_atlases/{pet_id}_mining_grid.png" for pet_id in HATCH_PETS],
+    *[f"assets/generated/sprites/{pet_id}_mining.gif" for pet_id in HATCH_PETS],
 ]
 
 
@@ -98,3 +102,21 @@ def test_character_gifs_are_hatch_pet_sized() -> None:
         with Image.open(ROOT / "assets" / "generated" / "sprites" / f"{pet_id}.gif") as image:
             assert image.size == (192, 208)
             assert getattr(image, "n_frames", 1) >= 4
+
+
+def test_player_mining_animation_assets_exist() -> None:
+    for relative_path in MINING_ASSETS:
+        path = ROOT / relative_path
+        assert path.exists(), relative_path
+        with Image.open(path) as image:
+            image.verify()
+
+    for pet_id in HATCH_PETS:
+        with Image.open(
+            ROOT / f"assets/generated/raw/pet_atlases/{pet_id}_mining_grid.png"
+        ) as atlas:
+            assert atlas.size == (768, 1024)
+
+        with Image.open(ROOT / f"assets/generated/sprites/{pet_id}_mining.gif") as animation:
+            assert animation.size == (96, 96)
+            assert getattr(animation, "n_frames", 1) >= 6

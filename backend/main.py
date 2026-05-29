@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from backend.api import routes_game, routes_health, routes_oracle
+from backend.api import routes_game, routes_health, routes_oracle, routes_ws
 from backend.db.connection import load_env_file
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -36,6 +36,7 @@ app.add_middleware(
 app.include_router(routes_health.router)
 app.include_router(routes_oracle.router)
 app.include_router(routes_game.router)
+app.include_router(routes_ws.router)
 
 app.mount("/src", StaticFiles(directory=FRONTEND_DIR / "src"), name="src")
 app.mount("/styles", StaticFiles(directory=FRONTEND_DIR / "styles"), name="styles")

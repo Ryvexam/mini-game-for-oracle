@@ -63,12 +63,15 @@ def test_validate_pseudo_accepts_french_letters() -> None:
 
 def test_chunk_generation_is_deterministic() -> None:
     assert generate_tiles(2, -3) == generate_tiles(2, -3)
-    assert len(generate_tiles(0, 0)) == 16
+    assert len(generate_tiles(0, 0)) == 8
 
 
 def test_chunk_generation_contains_coherent_features() -> None:
-    tiles = generate_tiles(1, 0)
-    joined = "".join(tiles)
+    joined = "".join(
+        "".join(generate_tiles(chunk_x, chunk_y))
+        for chunk_y in range(-4, 5)
+        for chunk_x in range(-4, 5)
+    )
     assert "w" in joined
     assert "v" in joined
     assert "d" in joined
@@ -82,6 +85,11 @@ def test_rivers_are_not_too_wide() -> None:
 
 
 def test_generated_resources_include_forest_clusters() -> None:
-    resources = generated_resources(0, 1)
+    resources = [
+        resource
+        for chunk_y in range(-4, 5)
+        for chunk_x in range(-4, 5)
+        for resource in generated_resources(chunk_x, chunk_y)
+    ]
     tree_count = sum(1 for resource in resources if resource.kind == "tree")
-    assert tree_count >= 2
+    assert tree_count >= 20

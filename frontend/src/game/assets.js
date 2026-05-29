@@ -41,6 +41,17 @@ const IMAGE_ASSETS = {
     oracle_icon: "/assets/generated/ui/oracle_icon.png",
     interaction_prompt: "/assets/generated/ui/interaction_prompt.png",
   },
+  animations: {
+    player_mining: "/assets/generated/sprites/player_mining.gif",
+    living_being_mining: "/assets/generated/sprites/living_being_mining.gif",
+    human_mining: "/assets/generated/sprites/human_mining.gif",
+    monkey_mining: "/assets/generated/sprites/monkey_mining.gif",
+    lynx_mining: "/assets/generated/sprites/lynx_mining.gif",
+    oracle_sage_mining: "/assets/generated/sprites/oracle_sage_mining.gif",
+    ref_spirit_mining: "/assets/generated/sprites/ref_spirit_mining.gif",
+    collection_keeper_mining: "/assets/generated/sprites/collection_keeper_mining.gif",
+    final_guardian_mining: "/assets/generated/sprites/final_guardian_mining.gif",
+  },
 };
 
 function loadImage(src) {

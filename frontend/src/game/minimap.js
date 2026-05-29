@@ -1,4 +1,4 @@
-import { TILE_SIZE } from "./constants.js";
+import { CHUNK_TILES, TILE_SIZE } from "./constants.js";
 
 const MAP_RADIUS = 30;
 const MAP_SIZE = MAP_RADIUS * 2 + 1;
@@ -44,10 +44,10 @@ export function renderMiniMap(ctx, state) {
 }
 
 export function formatCoordinates(player) {
-  if (!player) return "Bloc 0, 0 · px 0, 0";
+  if (!player) return "Bloc 0, 0";
   const tileX = Math.floor(player.x / TILE_SIZE);
   const tileY = Math.floor(player.y / TILE_SIZE);
-  return `Bloc ${tileX}, ${tileY} · px ${Math.round(player.x)}, ${Math.round(player.y)}`;
+  return `Bloc ${tileX}, ${tileY}`;
 }
 
 function drawEmpty(ctx) {
@@ -57,10 +57,10 @@ function drawEmpty(ctx) {
 }
 
 function tileAt(chunks, tileX, tileY) {
-  const chunkX = Math.floor(tileX / 16);
-  const chunkY = Math.floor(tileY / 16);
-  const localX = mod(tileX, 16);
-  const localY = mod(tileY, 16);
+  const chunkX = Math.floor(tileX / CHUNK_TILES);
+  const chunkY = Math.floor(tileY / CHUNK_TILES);
+  const localX = mod(tileX, CHUNK_TILES);
+  const localY = mod(tileY, CHUNK_TILES);
   const chunk = chunks.find((item) => item.chunk_x === chunkX && item.chunk_y === chunkY);
   return chunk?.tiles?.[localY]?.[localX] ?? "g";
 }

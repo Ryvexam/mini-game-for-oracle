@@ -22,3 +22,14 @@ def test_frontend_index_is_served() -> None:
     response = client.get("/")
     assert response.status_code == 200
     assert "Entre ton pseudo" in response.text
+
+
+def test_multiplayer_websocket_broadcasts_presence() -> None:
+    client = TestClient(app)
+    with client.websocket_connect("/ws/game?pseudo=Alpha&skin_id=player") as alpha:
+        first = alpha.receive_json()
+        assert first["type"] == "presence"
+        alpha.send_json({"x": 96, "y": 144, "skin_id": "player"})
+        second = alpha.receive_json()
+        assert second["players"][0]["pseudo"] == "Alpha"
+        assert second["players"][0]["x"] == 96

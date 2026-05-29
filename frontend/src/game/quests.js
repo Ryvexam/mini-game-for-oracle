@@ -1,3 +1,5 @@
+import { TILE_SIZE } from "./constants.js";
+
 const INTERACTION_RANGE = 72;
 
 export function findInteraction(state) {
@@ -37,6 +39,39 @@ export function actionLabel(kind) {
   if (kind === "tree") return "Couper l'arbre";
   if (kind === "ore") return "Miner le filon";
   return "Miner la roche";
+}
+
+export function questTargetLabel(state) {
+  const step = state.quest?.steps?.[state.quest.step_index];
+  if (!step) return "";
+  if (step.kind === "talk" && step.target_id) {
+    const npc = state.npcs.find((item) => item.id === step.target_id);
+    return npc ? `Objectif : ${npc.name} au bloc ${blockX(npc.x)}, ${blockY(npc.y)}` : "";
+  }
+  if (step.kind === "harvest") {
+    const resource = nearestResource(state);
+    return resource ? `Objectif : ressource au bloc ${blockX(resource.x)}, ${blockY(resource.y)}` : "";
+  }
+  if (step.kind === "sql") {
+    const sage = state.npcs.find((item) => item.id === "sage-oracle");
+    return sage ? `Objectif : Sage Oracle au bloc ${blockX(sage.x)}, ${blockY(sage.y)}` : "";
+  }
+  return "";
+}
+
+function nearestResource(state) {
+  if (!state.player || state.resources.length === 0) return null;
+  return [...state.resources].sort(
+    (a, b) => distance(state.player, a) - distance(state.player, b),
+  )[0];
+}
+
+function blockX(worldX) {
+  return Math.floor(worldX / TILE_SIZE);
+}
+
+function blockY(worldY) {
+  return Math.floor(worldY / TILE_SIZE);
 }
 
 function distance(a, b) {

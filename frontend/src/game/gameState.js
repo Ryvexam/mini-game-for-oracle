@@ -1,3 +1,5 @@
+import { CHUNK_PIXELS } from "./constants.js";
+
 export function createInitialState({ pseudo, assets }) {
   return {
     pseudo,
@@ -18,6 +20,8 @@ export function createInitialState({ pseudo, assets }) {
     positionDirty: false,
     moveInFlight: false,
     lastSyncedPosition: null,
+    presenceSocket: null,
+    presenceSyncMs: 0,
   };
 }
 
@@ -41,8 +45,8 @@ export function applyActionResult(state, result, options = {}) {
 
 export function currentChunk(player) {
   return {
-    x: Math.floor(player.x / 768),
-    y: Math.floor(player.y / 768),
+    x: Math.floor(player.x / CHUNK_PIXELS),
+    y: Math.floor(player.y / CHUNK_PIXELS),
   };
 }
 
@@ -54,6 +58,8 @@ function mergeServerPlayer(localPlayer, serverPlayer, options = {}) {
       direction: localPlayer?.direction ?? "down",
       frame: localPlayer?.frame ?? 0,
       animationMs: localPlayer?.animationMs ?? 0,
+      action: localPlayer?.action ?? null,
+      actionMs: localPlayer?.actionMs ?? 0,
       moving: false,
     };
   }
@@ -64,6 +70,8 @@ function mergeServerPlayer(localPlayer, serverPlayer, options = {}) {
     direction: localPlayer.direction ?? "down",
     frame: localPlayer.frame ?? 0,
     animationMs: localPlayer.animationMs ?? 0,
+    action: localPlayer.action ?? null,
+    actionMs: localPlayer.actionMs ?? 0,
     moving: localPlayer.moving ?? false,
   };
 }

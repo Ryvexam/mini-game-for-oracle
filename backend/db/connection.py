@@ -5,8 +5,10 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
+_POOL: Any | None = None
 
 
 class OracleConfigError(RuntimeError):
@@ -48,6 +50,19 @@ def get_oracle_settings() -> OracleSettings:
 
 @contextmanager
 def oracle_connection() -> Iterator[object]:
+    pool = oracle_pool()
+    connection = pool.acquire()
+    try:
+        yield connection
+    finally:
+        pool.release(connection)
+
+
+def oracle_pool() -> object:
+    global _POOL
+    if _POOL is not None:
+        return _POOL
+
     settings = get_oracle_settings()
     if not settings.is_complete:
         raise OracleConfigError("Oracle connection unavailable. Missing Oracle credentials.")
@@ -58,12 +73,14 @@ def oracle_connection() -> Iterator[object]:
         message = "Oracle connection unavailable. python-oracledb is not installed."
         raise OracleConfigError(message) from exc
 
-    connection = oracledb.connect(
+    _POOL = oracledb.create_pool(
         user=settings.user,
         password=settings.password,
         dsn=settings.dsn,
+        min=int(os.environ.get("ORACLE_POOL_MIN", "1")),
+        max=int(os.environ.get("ORACLE_POOL_MAX", "12")),
+        increment=int(os.environ.get("ORACLE_POOL_INCREMENT", "1")),
+        timeout=int(os.environ.get("ORACLE_POOL_TIMEOUT", "60")),
+        wait_timeout=int(os.environ.get("ORACLE_POOL_WAIT_TIMEOUT", "5000")),
     )
-    try:
-        yield connection
-    finally:
-        connection.close()
+    return _POOL

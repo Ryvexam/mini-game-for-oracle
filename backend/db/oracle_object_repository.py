@@ -19,6 +19,9 @@ from backend.models.game import (
 )
 
 DB_DIR = Path(__file__).resolve().parent
+CHUNK_TILES = 8
+TILE_SIZE = 48
+CHUNK_PIXELS = CHUNK_TILES * TILE_SIZE
 
 SKINS = ["player", "human", "monkey", "lynx", "oracle_sage", "collection_keeper"]
 QUEST_ID = "oracle-village-initiation"
@@ -261,10 +264,17 @@ def talk_to_npc(pseudo: str, npc_id: str) -> ActionResult:
 
 def get_world_state(pseudo: str, center_x: int, center_y: int) -> WorldState:
     player = get_player(pseudo)
+    chunk_coords = [
+        (chunk_x, chunk_y)
+        for chunk_y in range(center_y - 4, center_y + 5)
+        for chunk_x in range(center_x - 4, center_x + 5)
+    ]
+    ensure_generated_resources_for_chunks(chunk_coords)
+    resources_by_chunk = get_resources_for_chunks(chunk_coords)
+    npcs_by_chunk = get_npcs_for_chunks(chunk_coords)
     chunks = [
-        get_chunk(chunk_x, chunk_y)
-        for chunk_y in range(center_y - 2, center_y + 3)
-        for chunk_x in range(center_x - 2, center_x + 3)
+        build_chunk(chunk_x, chunk_y, resources_by_chunk, npcs_by_chunk)
+        for chunk_x, chunk_y in chunk_coords
     ]
     return WorldState(
         player=player,
@@ -316,9 +326,18 @@ def get_other_players(pseudo: str) -> list[OtherPlayer]:
 
 
 def get_chunk(chunk_x: int, chunk_y: int) -> ChunkState:
-    tiles = generate_tiles(chunk_x, chunk_y)
-    resources = get_resources_for_chunk(chunk_x, chunk_y)
-    npcs = get_npcs_for_chunk(chunk_x, chunk_y)
+    ensure_generated_resources(chunk_x, chunk_y)
+    resources_by_chunk = {(chunk_x, chunk_y): get_resources_for_chunk(chunk_x, chunk_y)}
+    npcs_by_chunk = {(chunk_x, chunk_y): get_npcs_for_chunk(chunk_x, chunk_y)}
+    return build_chunk(chunk_x, chunk_y, resources_by_chunk, npcs_by_chunk)
+
+
+def build_chunk(
+    chunk_x: int,
+    chunk_y: int,
+    resources_by_chunk: dict[tuple[int, int], list[ResourceNode]],
+    npcs_by_chunk: dict[tuple[int, int], list[NpcState]],
+) -> ChunkState:
     village = None
     if chunk_x == 0 and chunk_y == 0:
         village = {
@@ -330,20 +349,20 @@ def get_chunk(chunk_x: int, chunk_y: int) -> ChunkState:
     return ChunkState(
         chunk_x=chunk_x,
         chunk_y=chunk_y,
-        tiles=tiles,
-        resources=resources,
-        npcs=npcs,
+        tiles=generate_tiles(chunk_x, chunk_y),
+        resources=resources_by_chunk.get((chunk_x, chunk_y), []),
+        npcs=npcs_by_chunk.get((chunk_x, chunk_y), []),
         village=village,
     )
 
 
 def generate_tiles(chunk_x: int, chunk_y: int) -> list[str]:
     tiles: list[str] = []
-    for y in range(16):
+    for y in range(CHUNK_TILES):
         row = []
-        for x in range(16):
-            world_x = chunk_x * 16 + x
-            world_y = chunk_y * 16 + y
+        for x in range(CHUNK_TILES):
+            world_x = chunk_x * CHUNK_TILES + x
+            world_y = chunk_y * CHUNK_TILES + y
             row.append(tile_code_at(world_x, world_y))
         tiles.append("".join(row))
     return tiles
@@ -352,7 +371,7 @@ def generate_tiles(chunk_x: int, chunk_y: int) -> list[str]:
 def tile_code_at(world_x: int, world_y: int) -> str:
     river_left = river_left_x(world_y)
     river_width = river_tile_width(world_y)
-    road_distance = min(abs(world_x), abs(world_y), abs(world_x - world_y // 2))
+    road_distance = road_distance_at(world_x, world_y)
     biome = biome_value(world_x, world_y)
     detail = deterministic_noise(world_x, world_y)
 
@@ -360,7 +379,7 @@ def tile_code_at(world_x: int, world_y: int) -> str:
         return "w"
     if world_x in {river_left - 1, river_left + river_width}:
         return "v"
-    if road_distance == 0:
+    if road_distance <= 0.42:
         return "d"
     if biome > 72:
         return "f" if detail % 7 == 0 else "g"
@@ -384,20 +403,53 @@ def river_tile_width(world_y: int) -> int:
     return 2 if deterministic_noise(37, world_y // 12) % 5 == 0 else 1
 
 
+def road_distance_at(world_x: int, world_y: int) -> float:
+    east_west_y = round(math.sin(world_x * 0.055) * 4 + math.sin(world_x * 0.017 + 2.1) * 9)
+    north_south_x = round(math.sin(world_y * 0.061 + 0.8) * 5 + math.sin(world_y * 0.019) * 10)
+    forest_trail_x = round(world_y * 0.42 + math.sin(world_y * 0.08) * 5 - 17)
+    return min(
+        abs(world_y - east_west_y),
+        abs(world_x - north_south_x),
+        abs(world_x - forest_trail_x),
+    )
+
+
 def biome_value(world_x: int, world_y: int) -> int:
-    coarse_x = math.floor(world_x / 10)
-    coarse_y = math.floor(world_y / 10)
-    local = deterministic_noise(coarse_x, coarse_y) % 100
-    neighbor = deterministic_noise(coarse_x + 1, coarse_y - 1) % 100
-    return (local * 3 + neighbor) // 4
+    broad = smooth_noise(world_x / 22, world_y / 22)
+    medium = smooth_noise(world_x / 9 + 18.4, world_y / 9 - 7.2)
+    detail = smooth_noise(world_x / 4 - 11.1, world_y / 4 + 3.9)
+    return round(broad * 58 + medium * 30 + detail * 12)
+
+
+def smooth_noise(x: float, y: float) -> float:
+    x0 = math.floor(x)
+    y0 = math.floor(y)
+    tx = smoothstep(x - x0)
+    ty = smoothstep(y - y0)
+    a = unit_noise(x0, y0)
+    b = unit_noise(x0 + 1, y0)
+    c = unit_noise(x0, y0 + 1)
+    d = unit_noise(x0 + 1, y0 + 1)
+    return lerp(lerp(a, b, tx), lerp(c, d, tx), ty)
+
+
+def smoothstep(value: float) -> float:
+    return value * value * (3 - 2 * value)
+
+
+def lerp(start: float, end: float, amount: float) -> float:
+    return start + (end - start) * amount
+
+
+def unit_noise(x: int, y: int) -> float:
+    return (deterministic_noise(x, y) % 10_000) / 9_999
 
 
 def get_resources_for_chunk(chunk_x: int, chunk_y: int) -> list[ResourceNode]:
-    ensure_generated_resources(chunk_x, chunk_y)
-    min_x = chunk_x * 768
-    min_y = chunk_y * 768
-    max_x = min_x + 768
-    max_y = min_y + 768
+    min_x = chunk_x * CHUNK_PIXELS
+    min_y = chunk_y * CHUNK_PIXELS
+    max_x = min_x + CHUNK_PIXELS
+    max_y = min_y + CHUNK_PIXELS
     sql = """
         SELECT r.id, r.kind, r.x, r.y, r.amount
         FROM game_resource_nodes r
@@ -421,7 +473,59 @@ def get_resources_for_chunk(chunk_x: int, chunk_y: int) -> list[ResourceNode]:
     ]
 
 
+def get_resources_for_chunks(
+    chunk_coords: list[tuple[int, int]],
+) -> dict[tuple[int, int], list[ResourceNode]]:
+    if not chunk_coords:
+        return {}
+    min_chunk_x = min(chunk_x for chunk_x, _chunk_y in chunk_coords)
+    max_chunk_x = max(chunk_x for chunk_x, _chunk_y in chunk_coords)
+    min_chunk_y = min(chunk_y for _chunk_x, chunk_y in chunk_coords)
+    max_chunk_y = max(chunk_y for _chunk_x, chunk_y in chunk_coords)
+    min_x = min_chunk_x * CHUNK_PIXELS
+    min_y = min_chunk_y * CHUNK_PIXELS
+    max_x = (max_chunk_x + 1) * CHUNK_PIXELS
+    max_y = (max_chunk_y + 1) * CHUNK_PIXELS
+    sql = """
+        SELECT r.id, r.kind, r.x, r.y, r.amount
+        FROM game_resource_nodes r
+        WHERE r.x >= :min_x AND r.x < :max_x
+          AND r.y >= :min_y AND r.y < :max_y
+          AND r.amount > 0
+        ORDER BY r.id
+    """
+    resources_by_chunk: dict[tuple[int, int], list[ResourceNode]] = {
+        coord: [] for coord in chunk_coords
+    }
+    with oracle_connection() as connection, connection.cursor() as cursor:
+        cursor.execute(sql, min_x=min_x, max_x=max_x, min_y=min_y, max_y=max_y)
+        rows = cursor.fetchall()
+    for row in rows:
+        resource_id = str(row[0])
+        x = int(row[2])
+        y = int(row[3])
+        if resource_id != resource_id_for_position(x, y):
+            continue
+        chunk = (x // CHUNK_PIXELS, y // CHUNK_PIXELS)
+        if chunk not in resources_by_chunk:
+            continue
+        resources_by_chunk[chunk].append(
+            ResourceNode(
+                id=resource_id,
+                kind=str(row[1]),
+                x=x,
+                y=y,
+                amount=int(row[4]),
+            )
+        )
+    return resources_by_chunk
+
+
 def ensure_generated_resources(chunk_x: int, chunk_y: int) -> None:
+    ensure_generated_resources_for_chunks([(chunk_x, chunk_y)])
+
+
+def ensure_generated_resources_for_chunks(chunk_coords: list[tuple[int, int]]) -> None:
     sql = """
         MERGE INTO game_resource_nodes r
         USING (
@@ -446,24 +550,25 @@ def ensure_generated_resources(chunk_x: int, chunk_y: int) -> None:
     """
     with oracle_connection() as connection:
         with connection.cursor() as cursor:
-            for node in generated_resources(chunk_x, chunk_y):
-                cursor.execute(
-                    sql,
-                    id=node.id,
-                    kind=node.kind,
-                    x=node.x,
-                    y=node.y,
-                    amount=node.amount,
-                )
+            for chunk_x, chunk_y in chunk_coords:
+                for node in generated_resources(chunk_x, chunk_y):
+                    cursor.execute(
+                        sql,
+                        id=node.id,
+                        kind=node.kind,
+                        x=node.x,
+                        y=node.y,
+                        amount=node.amount,
+                    )
         connection.commit()
 
 
 def generated_resources(chunk_x: int, chunk_y: int) -> list[ResourceNode]:
     nodes = []
-    origin_tile_x = chunk_x * 16
-    origin_tile_y = chunk_y * 16
-    for tile_y in range(16):
-        for tile_x in range(16):
+    origin_tile_x = chunk_x * CHUNK_TILES
+    origin_tile_y = chunk_y * CHUNK_TILES
+    for tile_y in range(CHUNK_TILES):
+        for tile_x in range(CHUNK_TILES):
             world_x = origin_tile_x + tile_x
             world_y = origin_tile_y + tile_y
             tile = tile_code_at(world_x, world_y)
@@ -473,10 +578,10 @@ def generated_resources(chunk_x: int, chunk_y: int) -> list[ResourceNode]:
                 continue
             nodes.append(
                 ResourceNode(
-                    id=f"gen-{chunk_x}-{chunk_y}-{tile_x}-{tile_y}",
+                    id=resource_id_for_tile(chunk_x, chunk_y, tile_x, tile_y),
                     kind=kind,
-                    x=world_x * 48 + 8 + (seed % 17),
-                    y=world_y * 48 + 10 + ((seed // 11) % 15),
+                    x=world_x * TILE_SIZE + 8 + (seed % 17),
+                    y=world_y * TILE_SIZE + 10 + ((seed // 11) % 15),
                     amount=resource_amount(kind, seed),
                 )
             )
@@ -498,6 +603,20 @@ def resource_kind_for_tile(tile: str, world_x: int, world_y: int, seed: int) -> 
     return None
 
 
+def resource_id_for_position(x: int, y: int) -> str:
+    world_x = x // TILE_SIZE
+    world_y = y // TILE_SIZE
+    chunk_x = world_x // CHUNK_TILES
+    chunk_y = world_y // CHUNK_TILES
+    tile_x = world_x - chunk_x * CHUNK_TILES
+    tile_y = world_y - chunk_y * CHUNK_TILES
+    return resource_id_for_tile(chunk_x, chunk_y, tile_x, tile_y)
+
+
+def resource_id_for_tile(chunk_x: int, chunk_y: int, tile_x: int, tile_y: int) -> str:
+    return f"gen-{chunk_x}-{chunk_y}-{tile_x}-{tile_y}"
+
+
 def resource_amount(kind: str, seed: int) -> int:
     if kind == "tree":
         return 3 + seed % 5
@@ -509,6 +628,15 @@ def resource_amount(kind: str, seed: int) -> int:
 def get_npcs_for_chunk(chunk_x: int, chunk_y: int) -> list[NpcState]:
     if chunk_x != 0 or chunk_y != 0:
         return []
+    return get_npcs_for_chunks([(0, 0)]).get((0, 0), [])
+
+
+def get_npcs_for_chunks(
+    chunk_coords: list[tuple[int, int]],
+) -> dict[tuple[int, int], list[NpcState]]:
+    npcs_by_chunk: dict[tuple[int, int], list[NpcState]] = {coord: [] for coord in chunk_coords}
+    if (0, 0) not in npcs_by_chunk:
+        return npcs_by_chunk
     sql = """
         SELECT n.id, n.display_name, n.role, n.x, n.y, n.quest_marker
         FROM game_npcs n
@@ -517,7 +645,7 @@ def get_npcs_for_chunk(chunk_x: int, chunk_y: int) -> list[NpcState]:
     with oracle_connection() as connection, connection.cursor() as cursor:
         cursor.execute(sql)
         rows = cursor.fetchall()
-    return [
+    npcs_by_chunk[(0, 0)] = [
         NpcState(
             id=str(row[0]),
             name=str(row[1]),
@@ -528,6 +656,7 @@ def get_npcs_for_chunk(chunk_x: int, chunk_y: int) -> list[NpcState]:
         )
         for row in rows
     ]
+    return npcs_by_chunk
 
 
 def get_quest(pseudo: str) -> QuestState | None:

@@ -1,6 +1,13 @@
-import { CANVAS_HEIGHT, CANVAS_WIDTH, DIRECTIONS, FRAME_SIZE, TILE_SIZE } from "./constants.js";
+import {
+  CANVAS_HEIGHT,
+  CANVAS_WIDTH,
+  CHUNK_PIXELS,
+  DIRECTIONS,
+  FRAME_SIZE,
+  TILE_SIZE,
+} from "./constants.js";
+import { questTargetLabel } from "./quests.js";
 
-const CHUNK_PIXELS = 768;
 const TILE_BY_CODE = {
   g: "grass",
   p: "dirt",
@@ -81,7 +88,11 @@ function drawNpcs(ctx, state, assets) {
     const y = npc.y - state.camera.y;
     if (!visible(x, y, FRAME_SIZE, FRAME_SIZE)) continue;
     const sprite = npc.role === "miner" ? "lynx" : npc.role === "merchant" ? "monkey" : "oracle_sage";
-    drawSprite(ctx, assets.sprites[sprite], x, y, "down", 0);
+    if (npc.role === "miner") {
+      drawMiningAnimation(ctx, assets, sprite, x - 20, y - 30);
+    } else {
+      drawSprite(ctx, assets.sprites[sprite], x, y, "down", 0);
+    }
     drawNameplate(ctx, npc.name, x + 24, y - 10, "#fff8e8");
     if (npc.quest_marker) drawNameplate(ctx, npc.quest_marker, x + 42, y - 32, "#f6dfac");
   }
@@ -100,6 +111,11 @@ function drawOtherPlayers(ctx, state, assets) {
 function drawPlayer(ctx, state, assets) {
   const x = state.player.x - state.camera.x;
   const y = state.player.y - state.camera.y;
+  if (state.player.action === "mining") {
+    drawMiningAnimation(ctx, assets, state.player.skin_id, x - 20, y - 30);
+    drawNameplate(ctx, state.player.pseudo, x + 24, y - 10, "#f6dfac");
+    return;
+  }
   drawSprite(
     ctx,
     assets.sprites[state.player.skin_id] ?? assets.sprites.player,
@@ -109,6 +125,11 @@ function drawPlayer(ctx, state, assets) {
     state.player.frame ?? 0,
   );
   drawNameplate(ctx, state.player.pseudo, x + 24, y - 10, "#f6dfac");
+}
+
+function drawMiningAnimation(ctx, assets, skinId, x, y) {
+  const image = assets.animations[`${skinId}_mining`] ?? assets.animations.player_mining;
+  ctx.drawImage(image, x, y, 96, 96);
 }
 
 function drawSprite(ctx, sheet, x, y, direction, frame) {
@@ -132,13 +153,15 @@ function drawHud(ctx, state) {
 function drawQuestPanel(ctx, state) {
   if (!state.quest) return;
   const step = state.quest.steps[state.quest.step_index] ?? state.quest.steps.at(-1);
-  drawPanel(ctx, CANVAS_WIDTH - 330, 16, 312, state.quest.sql_challenge ? 248 : 112, "#fff8e8");
+  const target = questTargetLabel(state);
+  drawPanel(ctx, CANVAS_WIDTH - 330, 16, 312, state.quest.sql_challenge ? 264 : 128, "#fff8e8");
   drawText(ctx, state.quest.title, CANVAS_WIDTH - 312, 48, "#7d2f2b", 16);
   drawWrapped(ctx, step.text, CANVAS_WIDTH - 312, 76, 276, 18, "#17221f");
+  if (target) drawWrapped(ctx, target, CANVAS_WIDTH - 312, 112, 276, 18, "#17221f");
   if (state.quest.sql_challenge) {
-    drawText(ctx, "Question SQL", CANVAS_WIDTH - 312, 126, "#7d2f2b", 15);
-    drawWrapped(ctx, state.quest.sql_challenge.prompt, CANVAS_WIDTH - 312, 150, 276, 17, "#17221f");
-    drawText(ctx, "Appuie 1, 2 ou 3 pour répondre", CANVAS_WIDTH - 312, 218, "#17221f", 13);
+    drawText(ctx, "Question SQL", CANVAS_WIDTH - 312, 146, "#7d2f2b", 15);
+    drawWrapped(ctx, state.quest.sql_challenge.prompt, CANVAS_WIDTH - 312, 170, 276, 17, "#17221f");
+    drawText(ctx, "Appuie 1, 2 ou 3 pour répondre", CANVAS_WIDTH - 312, 238, "#17221f", 13);
   }
 }
 
