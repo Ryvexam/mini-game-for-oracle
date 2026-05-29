@@ -22,6 +22,10 @@
 ![No ORM](https://img.shields.io/badge/ORM-none_·_raw_PL%2FSQL-red?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 
+<br>
+
+<img src="docs/screenshot.png" alt="Oracle Object Adventure gameplay" width="900">
+
 </div>
 
 ---
