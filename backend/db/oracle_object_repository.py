@@ -263,8 +263,8 @@ def get_world_state(pseudo: str, center_x: int, center_y: int) -> WorldState:
     player = get_player(pseudo)
     chunks = [
         get_chunk(chunk_x, chunk_y)
-        for chunk_y in range(center_y - 1, center_y + 2)
-        for chunk_x in range(center_x - 1, center_x + 2)
+        for chunk_y in range(center_y - 2, center_y + 3)
+        for chunk_x in range(center_x - 2, center_x + 3)
     ]
     return WorldState(
         player=player,
@@ -350,19 +350,17 @@ def generate_tiles(chunk_x: int, chunk_y: int) -> list[str]:
 
 
 def tile_code_at(world_x: int, world_y: int) -> str:
-    river_center = river_center_x(world_y)
-    river_distance = abs(world_x - river_center)
+    river_left = river_left_x(world_y)
+    river_width = river_tile_width(world_y)
     road_distance = min(abs(world_x), abs(world_y), abs(world_x - world_y // 2))
     biome = biome_value(world_x, world_y)
     detail = deterministic_noise(world_x, world_y)
 
-    if river_distance <= river_width(world_y):
+    if river_left <= world_x < river_left + river_width:
         return "w"
-    if river_distance <= river_width(world_y) + 1:
+    if world_x in {river_left - 1, river_left + river_width}:
         return "v"
-    if road_distance <= 1:
-        return "p"
-    if road_distance == 2:
+    if road_distance == 0:
         return "d"
     if biome > 72:
         return "f" if detail % 7 == 0 else "g"
@@ -373,7 +371,7 @@ def tile_code_at(world_x: int, world_y: int) -> str:
     return "g"
 
 
-def river_center_x(world_y: int) -> int:
+def river_left_x(world_y: int) -> int:
     return round(
         18
         + math.sin(world_y * 0.09) * 8
@@ -382,8 +380,8 @@ def river_center_x(world_y: int) -> int:
     )
 
 
-def river_width(world_y: int) -> int:
-    return 1 + (deterministic_noise(37, world_y // 8) % 2)
+def river_tile_width(world_y: int) -> int:
+    return 2 if deterministic_noise(37, world_y // 12) % 5 == 0 else 1
 
 
 def biome_value(world_x: int, world_y: int) -> int:

@@ -76,11 +76,37 @@ h1 {
   align-items: start;
 }
 
+.play-column {
+  display: grid;
+  gap: 12px;
+}
+
 .game-stage,
+.world-meta,
 .panel {
   border: 3px solid var(--line);
   background: var(--paper);
   box-shadow: 12px 12px 0 rgba(23, 34, 31, 0.18);
+}
+
+.world-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 116px;
+  padding: 12px 14px;
+}
+
+.world-meta strong {
+  display: block;
+  font-size: 1.2rem;
+}
+
+#minimap {
+  width: 192px;
+  height: 192px;
+  border: 3px solid var(--line);
+  background: #274239;
 }
 
 .game-stage {
@@ -89,7 +115,7 @@ h1 {
   height: 640px;
 }
 
-canvas {
+#game {
   width: 960px;
   height: 640px;
   image-rendering: pixelated;
@@ -179,7 +205,7 @@ pre {
     grid-template-columns: 1fr;
   }
 
-  canvas,
+  #game,
   .game-stage {
     width: 100%;
     height: auto;

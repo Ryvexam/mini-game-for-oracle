@@ -17,15 +17,25 @@
       </header>
 
       <section class="game-layout">
-        <div class="game-stage">
-          <canvas id="game" width="960" height="640" aria-label="Jeu Île des Objets Oracle"></canvas>
-          <div id="login" class="login">
-            <form id="login-form">
-              <p class="eyebrow">Multijoueur Oracle</p>
-              <h2>Entre ton pseudo</h2>
-              <input id="pseudo" name="pseudo" autocomplete="nickname" minlength="3" maxlength="24" required>
-              <button type="submit">Rejoindre le monde</button>
-            </form>
+        <div class="play-column">
+          <div class="world-meta">
+            <div>
+              <p class="eyebrow">Position</p>
+              <strong id="coords">Bloc 0, 0 · px 0, 0</strong>
+            </div>
+            <canvas id="minimap" width="192" height="192" aria-label="Mini carte"></canvas>
+          </div>
+
+          <div class="game-stage">
+            <canvas id="game" width="960" height="640" aria-label="Jeu Île des Objets Oracle"></canvas>
+            <div id="login" class="login">
+              <form id="login-form">
+                <p class="eyebrow">Multijoueur Oracle</p>
+                <h2>Entre ton pseudo</h2>
+                <input id="pseudo" name="pseudo" autocomplete="nickname" minlength="3" maxlength="24" required>
+                <button type="submit">Rejoindre le monde</button>
+              </form>
+            </div>
           </div>
         </div>
 

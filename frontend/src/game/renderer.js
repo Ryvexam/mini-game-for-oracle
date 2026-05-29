@@ -3,7 +3,7 @@ import { CANVAS_HEIGHT, CANVAS_WIDTH, DIRECTIONS, FRAME_SIZE, TILE_SIZE } from "
 const CHUNK_PIXELS = 768;
 const TILE_BY_CODE = {
   g: "grass",
-  p: "path_straight",
+  p: "dirt",
   w: "water",
   r: "rocky",
   f: "flower_grass",

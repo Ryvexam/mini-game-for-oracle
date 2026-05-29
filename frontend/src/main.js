@@ -11,6 +11,7 @@ import { loadAssets } from "./game/assets.js";
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from "./game/constants.js";
 import { applyActionResult, applyWorldState, createInitialState, currentChunk } from "./game/gameState.js";
 import { createInput } from "./game/input.js";
+import { formatCoordinates, renderMiniMap } from "./game/minimap.js";
 import { updatePlayer } from "./game/player.js";
 import { findInteraction } from "./game/quests.js";
 import { render } from "./game/renderer.js";
@@ -22,6 +23,9 @@ const questTitle = document.querySelector("#quest-title");
 const questText = document.querySelector("#quest-text");
 const sqlBox = document.querySelector("#sql-box");
 const progressList = document.querySelector("#progress-list");
+const coords = document.querySelector("#coords");
+const minimap = document.querySelector("#minimap");
+const minimapCtx = minimap.getContext("2d");
 const login = document.querySelector("#login");
 const loginForm = document.querySelector("#login-form");
 const pseudoInput = document.querySelector("#pseudo");
@@ -29,6 +33,7 @@ const pseudoInput = document.querySelector("#pseudo");
 canvas.width = CANVAS_WIDTH;
 canvas.height = CANVAS_HEIGHT;
 ctx.imageSmoothingEnabled = false;
+minimapCtx.imageSmoothingEnabled = false;
 
 const input = createInput();
 const assets = await loadAssets();
@@ -99,6 +104,7 @@ function syncPanel() {
   questText.textContent = step?.text ?? "Explore le monde, récolte des ressources et parle aux PNJ.";
   sqlBox.textContent = state.quest?.sql_challenge?.sql_code ?? "Aucune question SQL active.";
   progressList.innerHTML = "";
+  coords.textContent = formatCoordinates(state.player);
   [
     `Joueur : ${state.player.pseudo}`,
     `Bois : ${state.player.wood}`,
@@ -140,6 +146,7 @@ function tick(now) {
     syncPanel();
   }
   render(ctx, state ?? { oracleError: "Entre ton pseudo pour lancer la partie." }, assets);
+  renderMiniMap(minimapCtx, state);
   requestAnimationFrame(tick);
 }
 

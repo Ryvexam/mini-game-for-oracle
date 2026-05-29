@@ -71,7 +71,14 @@ def test_chunk_generation_contains_coherent_features() -> None:
     joined = "".join(tiles)
     assert "w" in joined
     assert "v" in joined
-    assert "p" in joined
+    assert "d" in joined
+
+
+def test_rivers_are_not_too_wide() -> None:
+    for chunk_x in range(-2, 3):
+        for chunk_y in range(-2, 3):
+            for row in generate_tiles(chunk_x, chunk_y):
+                assert "www" not in row
 
 
 def test_generated_resources_include_forest_clusters() -> None:
