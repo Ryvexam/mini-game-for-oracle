@@ -34,11 +34,25 @@ export async function fetchWorld(pseudo, chunkX, chunkY) {
   return requestJson(`/api/game/world?${params.toString()}`);
 }
 
+export async function fetchMap(centerX, centerY, radius) {
+  const params = new URLSearchParams({
+    center_x: String(centerX),
+    center_y: String(centerY),
+    radius: String(radius),
+  });
+  return requestJson(`/api/game/map?${params.toString()}`);
+}
+
 export async function saveMove(pseudo, x, y) {
   return requestJson("/api/game/move", {
     method: "POST",
     body: JSON.stringify({ pseudo, x: Math.round(x), y: Math.round(y) }),
   });
+}
+
+export async function fetchStats(pseudo) {
+  const params = new URLSearchParams({ pseudo });
+  return requestJson(`/api/game/stats?${params.toString()}`);
 }
 
 export async function harvest(pseudo, targetId) {
@@ -52,6 +66,13 @@ export async function talk(pseudo, npcId) {
   return requestJson("/api/game/talk", {
     method: "POST",
     body: JSON.stringify({ pseudo, npc_id: npcId }),
+  });
+}
+
+export async function deposit(pseudo, chestId) {
+  return requestJson("/api/game/deposit", {
+    method: "POST",
+    body: JSON.stringify({ pseudo, chest_id: chestId }),
   });
 }
 

@@ -9,7 +9,9 @@ export function createInitialState({ pseudo, assets }) {
     chunks: [],
     resources: [],
     npcs: [],
+    chests: [],
     quest: null,
+    mapOpen: false,
     selectedSqlAnswer: 0,
     camera: { x: 0, y: 0 },
     nearbyInteraction: null,
@@ -22,15 +24,31 @@ export function createInitialState({ pseudo, assets }) {
     lastSyncedPosition: null,
     presenceSocket: null,
     presenceSyncMs: 0,
+    presenceReconnectMs: 800,
+    presenceHeartbeat: null,
+    connected: false,
+    chatLog: [],
+    chatInput: null,
+    stats: null,
+    statsOpen: false,
+    dayMs: 0,
   };
 }
 
 export function applyWorldState(state, world, options = {}) {
   state.player = mergeServerPlayer(state.player, world.player, options);
-  state.otherPlayers = world.players ?? [];
+  // Other players come live over WebSocket; only seed from REST before connecting.
+  if (!state.connected && (state.otherPlayers?.length ?? 0) === 0) {
+    state.otherPlayers = (world.players ?? []).map((player) => ({
+      ...player,
+      renderX: player.x,
+      renderY: player.y,
+    }));
+  }
   state.chunks = world.chunks ?? [];
   state.resources = state.chunks.flatMap((chunk) => chunk.resources ?? []);
   state.npcs = state.chunks.flatMap((chunk) => chunk.npcs ?? []);
+  state.chests = world.chests ?? [];
   state.quest = world.quest;
 }
 

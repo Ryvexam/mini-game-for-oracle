@@ -38,9 +38,21 @@ app.include_router(routes_oracle.router)
 app.include_router(routes_game.router)
 app.include_router(routes_ws.router)
 
+
+@app.on_event("startup")
+def _load_seed() -> None:
+    from backend.db import oracle_object_repository as repo
+
+    repo.load_world_seed()
+
 app.mount("/src", StaticFiles(directory=FRONTEND_DIR / "src"), name="src")
 app.mount("/styles", StaticFiles(directory=FRONTEND_DIR / "styles"), name="styles")
 app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
+
+
+@app.get("/world-map.png", include_in_schema=False)
+def world_map() -> FileResponse:
+    return FileResponse(FRONTEND_DIR / "public" / "world-map.png", media_type="image/png")
 
 
 @app.get("/", include_in_schema=False)

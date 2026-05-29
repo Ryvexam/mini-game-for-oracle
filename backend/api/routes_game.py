@@ -2,14 +2,17 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Query
 
+from backend.api.routes_ws import presence_hub
 from backend.db import oracle_object_repository as repository
 from backend.models.game import (
     ActionRequest,
     ActionResult,
+    DepositRequest,
     MoveRequest,
     PlayerSessionRequest,
     PlayerState,
     SqlAnswerRequest,
+    StatsResponse,
     TalkRequest,
     WorldState,
 )
@@ -26,6 +29,11 @@ def oracle_unavailable(exc: Exception) -> HTTPException:
 
 @router.post("/session", response_model=PlayerState)
 def create_session(request: PlayerSessionRequest) -> PlayerState:
+    if request.pseudo in presence_hub.connections:
+        raise HTTPException(
+            status_code=409,
+            detail="Ce pseudo est déjà connecté. Choisis-en un autre.",
+        )
     try:
         return repository.create_or_get_player(request.pseudo, request.skin_id)
     except ValueError as exc:
@@ -46,6 +54,15 @@ def world(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise oracle_unavailable(exc) from exc
+
+
+@router.get("/map")
+def map_region(
+    center_x: int = 0,
+    center_y: int = 0,
+    radius: int = 90,
+) -> dict:
+    return repository.get_map_region(center_x, center_y, radius)
 
 
 @router.post("/move", response_model=PlayerState)
@@ -72,6 +89,28 @@ def harvest(request: ActionRequest) -> ActionResult:
 def talk(request: TalkRequest) -> ActionResult:
     try:
         return repository.talk_to_npc(request.pseudo, request.npc_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise oracle_unavailable(exc) from exc
+
+
+@router.get("/stats", response_model=StatsResponse)
+def stats(
+    pseudo: str = Query(min_length=3, max_length=24, pattern=r"^[\w-]+$"),
+) -> StatsResponse:
+    try:
+        return repository.get_stats(pseudo)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise oracle_unavailable(exc) from exc
+
+
+@router.post("/deposit", response_model=ActionResult)
+def deposit(request: DepositRequest) -> ActionResult:
+    try:
+        return repository.deposit_resources(request.pseudo, request.chest_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:

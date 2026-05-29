@@ -42,6 +42,7 @@ REQUIRED_ASSETS = [
     "assets/generated/tiles/flower_grass.png",
     "assets/generated/objects/tree.png",
     "assets/generated/objects/rock.png",
+    "assets/generated/objects/ore_geode.png",
     "assets/generated/objects/type_forge.png",
     "assets/generated/objects/method_dojo.png",
     "assets/generated/objects/object_village.png",
@@ -69,7 +70,12 @@ HATCH_PETS = [
 PET_ATLAS_ASSETS = [f"assets/generated/raw/pet_atlases/{pet_id}_grid.png" for pet_id in HATCH_PETS]
 
 MINING_ASSETS = [
-    "assets/generated/raw/player_mining_concept.png",
+    "assets/generated/raw/ore_geode_concept.png",
+    *[f"assets/generated/raw/{pet_id}_mining_imagegen_sheet.png" for pet_id in HATCH_PETS],
+    *[
+        f"assets/generated/raw/mining_references/{pet_id}_current_reference.png"
+        for pet_id in HATCH_PETS
+    ],
     *[f"assets/generated/raw/pet_atlases/{pet_id}_mining_grid.png" for pet_id in HATCH_PETS],
     *[f"assets/generated/sprites/{pet_id}_mining.gif" for pet_id in HATCH_PETS],
 ]
@@ -86,8 +92,16 @@ def test_required_assets_exist_and_open() -> None:
 
 def test_sprite_sheets_have_expected_size() -> None:
     for path in (ROOT / "assets/generated/sprites").glob("*_sheet.png"):
+        if path.name.endswith("_mining_sheet.png"):
+            continue
         with Image.open(path) as image:
             assert image.size == (192, 192)
+
+
+def test_mining_sheets_are_frame_strips() -> None:
+    for path in (ROOT / "assets/generated/sprites").glob("*_mining_sheet.png"):
+        with Image.open(path) as image:
+            assert image.size == (1728, 96)
 
 
 def test_hatch_pet_outputs_exist_for_every_character() -> None:

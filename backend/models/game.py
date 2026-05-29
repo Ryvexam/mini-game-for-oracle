@@ -85,8 +85,24 @@ class QuestState(BaseModel):
     id: str
     title: str
     step_index: int
+    step_progress: int = 0
+    quest_number: int = 1
+    total_quests: int = 1
+    giver_name: str | None = None
+    giver_block_x: int | None = None
+    giver_block_y: int | None = None
     steps: list[QuestStep]
     sql_challenge: SqlChallenge | None = None
+
+
+class Chest(BaseModel):
+    id: str
+    owner: str
+    x: int
+    y: int
+    wood: int
+    stone: int
+    ore: int
 
 
 class ChunkState(BaseModel):
@@ -103,6 +119,12 @@ class WorldState(BaseModel):
     players: list[OtherPlayer]
     chunks: list[ChunkState]
     quest: QuestState | None
+    chests: list[Chest] = []
+
+
+class DepositRequest(BaseModel):
+    pseudo: str = Field(min_length=3, max_length=24, pattern=r"^[\w-]+$")
+    chest_id: str = Field(min_length=1, max_length=80)
 
 
 class ActionResult(BaseModel):
@@ -110,3 +132,29 @@ class ActionResult(BaseModel):
     message: str
     player: PlayerState
     quest: QuestState | None = None
+
+
+class PlayerStats(BaseModel):
+    pseudo: str
+    wood_gathered: int
+    stone_gathered: int
+    ore_gathered: int
+    harvest_actions: int
+    distance_moved: int
+    sql_attempts: int
+    sql_correct: int
+    total_gathered: int
+    rank_position: int
+
+
+class LeaderboardEntry(BaseModel):
+    pseudo: str
+    total_gathered: int
+    ore_gathered: int
+    sql_correct: int
+    rank_position: int
+
+
+class StatsResponse(BaseModel):
+    player: PlayerStats | None
+    leaderboard: list[LeaderboardEntry]

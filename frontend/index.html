@@ -22,6 +22,11 @@
             <div>
               <p class="eyebrow">Position</p>
               <strong id="coords">Bloc 0, 0</strong>
+              <div class="meta-buttons">
+                <button id="open-menu" type="button" class="menu-button">Menu &amp; aide</button>
+                <button id="open-map" type="button" class="menu-button">Voir la map</button>
+                <button id="logout" type="button" class="menu-button menu-button--danger" hidden>Se déconnecter</button>
+              </div>
             </div>
             <canvas id="minimap" width="192" height="192" aria-label="Mini carte"></canvas>
           </div>
@@ -32,8 +37,13 @@
               <form id="login-form">
                 <p class="eyebrow">Multijoueur Oracle</p>
                 <h2>Entre ton pseudo</h2>
-                <input id="pseudo" name="pseudo" autocomplete="nickname" minlength="3" maxlength="24" required>
+                <input id="pseudo" name="pseudo" autocomplete="nickname" minlength="3" maxlength="24" required placeholder="3 à 24 caractères">
                 <button type="submit">Rejoindre le monde</button>
+                <ul class="login-hints">
+                  <li><strong>Déplace-toi</strong> avec ZQSD ou les flèches</li>
+                  <li><strong>Récolte &amp; parle</strong> avec E</li>
+                  <li><strong>Discute</strong> avec Entrée &middot; <strong>Menu</strong> avec Tab</li>
+                </ul>
               </form>
             </div>
           </div>
@@ -45,9 +55,155 @@
           <p id="quest-text">Entre ton pseudo. Le joueur, l'inventaire et les quêtes sont chargés depuis Oracle.</p>
           <pre id="sql-box"></pre>
           <div id="progress-list" class="progress-list"></div>
+          <p class="panel-hint">Appuie sur <strong>Tab</strong> ou le bouton <strong>Menu &amp; aide</strong> pour les commandes et les statistiques.</p>
         </aside>
       </section>
     </main>
+
+    <div id="map-overlay" class="map-overlay" hidden>
+      <div class="map-overlay__frame">
+        <div class="map-overlay__head">
+          <strong>Carte du monde</strong>
+          <span class="map-hint">Flèches / ZQSD pour naviguer &middot; C ou Échap pour fermer</span>
+          <button id="close-map" type="button" class="menu-button">Fermer</button>
+        </div>
+        <canvas id="big-map" width="640" height="640" aria-label="Grande carte"></canvas>
+      </div>
+    </div>
+
+    <div id="uml-overlay" class="map-overlay" hidden>
+      <div class="map-overlay__frame uml-frame">
+        <div class="map-overlay__head">
+          <strong>Guide &amp; Schéma UML — Oracle Objet</strong>
+          <span class="map-hint">P ou Échap pour fermer</span>
+          <button id="close-uml" type="button" class="menu-button">Fermer</button>
+        </div>
+        <div class="uml-board">
+          <section class="uml-section">
+            <h3>Le jeu</h3>
+            <p class="uml-text">Bac à sable 2D multijoueur adossé aux fonctionnalités objet-relationnelles
+            d'Oracle. On rejoint avec un pseudo (plaque de nom + skin visibles), on explore un monde
+            chunké quasi infini, on récolte des ressources, on parle aux PNJ et on résout des quêtes de
+            jeu et des défis SQL. Oracle est obligatoire — aucun mode hors-ligne.</p>
+          </section>
+
+          <section class="uml-section">
+            <h3>Stack</h3>
+            <ul class="uml-list">
+              <li>Backend : FastAPI</li>
+              <li>Frontend : JavaScript vanilla + Canvas HTML5</li>
+              <li>Base : Oracle <code>localhost:1521/FREEPDB1</code> via <code>python-oracledb</code> (SQL/PL-SQL brut)</li>
+              <li>Tests : pytest · Lint : ruff</li>
+            </ul>
+          </section>
+
+          <section class="uml-section">
+            <h3>Contrôles</h3>
+            <table class="uml-table">
+              <tr><th>Touche</th><th>Action</th></tr>
+              <tr><td>ZQSD / Flèches</td><td>Se déplacer</td></tr>
+              <tr><td>E</td><td>Récolter / parler</td></tr>
+              <tr><td>Entrée ou T</td><td>Chat (Entrée envoie, Échap annule)</td></tr>
+              <tr><td>Tab ou M</td><td>Stats + classement Oracle</td></tr>
+              <tr><td>C</td><td>Grande carte du monde</td></tr>
+              <tr><td>1 / 2 / 3</td><td>Répondre au défi SQL</td></tr>
+              <tr><td>P</td><td>Ce guide</td></tr>
+            </table>
+          </section>
+
+          <section class="uml-section">
+            <h3>Fonctionnalités</h3>
+            <ul class="uml-list">
+              <li><strong>Monde procédural organique</strong> — bruit multi-octaves + domain warping
+              (élévation/humidité) → forêts, plaines, hautes terres rocheuses, montagnes, rivières.
+              Ressources groupées par biome.</li>
+              <li><strong>Multijoueur live</strong> — présence WebSocket (reconnexion auto, heartbeat),
+              messages système rejoindre/quitter, chat in-world, joueurs distants interpolés.</li>
+              <li><strong>Minimap</strong> — colorée par biome, viewport caméra + markers village/PNJ/ressources/joueurs.</li>
+              <li><strong>Cycle jour/nuit</strong> — éclairage sur 4 minutes.</li>
+              <li><strong>Stats via triggers SQL</strong> — <code>game_player_stats</code> alimentée par triggers, classée par la vue <code>game_leaderboard</code>.</li>
+            </ul>
+          </section>
+
+          <section class="uml-section">
+            <h3>Types objet</h3>
+            <div class="uml-tree">
+              <div class="uml-class uml-class--root">
+                <header>entity_t <em>«NOT FINAL»</em></header>
+                <ul class="uml-attrs"><li>id, display_name, x, y</li></ul>
+                <ul class="uml-ops"><li>+ move_to(x, y)</li></ul>
+              </div>
+              <div class="uml-inherit">▲ UNDER (héritage) ▲</div>
+              <div class="uml-row">
+                <div class="uml-class">
+                  <header>player_t</header>
+                  <ul class="uml-attrs"><li>skin_id, wood, stone, ore</li></ul>
+                  <ul class="uml-ops">
+                    <li>+ move_to(x, y) <em>«OVERRIDING»</em></li>
+                    <li>+ gain_resource(kind, amt)</li>
+                  </ul>
+                </div>
+                <div class="uml-class">
+                  <header>npc_t</header>
+                  <ul class="uml-attrs"><li>role, quest_marker</li></ul>
+                </div>
+              </div>
+              <div class="uml-row">
+                <div class="uml-class">
+                  <header>resource_node_t</header>
+                  <ul class="uml-attrs"><li>id, kind, x, y, amount</li></ul>
+                  <ul class="uml-ops"><li>+ harvest_amount() : NUMBER</li></ul>
+                </div>
+                <div class="uml-class">
+                  <header>chest_t</header>
+                  <ul class="uml-attrs"><li>id, owner, x, y, wood, stone, ore</li></ul>
+                  <ul class="uml-ops"><li>+ store(kind, qty)</li><li>+ total() : NUMBER</li></ul>
+                </div>
+                <div class="uml-class">
+                  <header>action_result_t <em>«retour»</em></header>
+                  <ul class="uml-attrs"><li>ok, message, resource_kind, amount</li></ul>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="uml-section">
+            <h3>Tables d'objets &amp; package</h3>
+            <ul class="uml-list">
+              <li><code>game_players</code> OF <code>player_t</code></li>
+              <li><code>game_npcs</code> OF <code>npc_t</code></li>
+              <li><code>game_resource_nodes</code> OF <code>resource_node_t</code></li>
+              <li><code>game_chests</code> OF <code>chest_t</code></li>
+            </ul>
+            <div class="uml-class uml-class--pkg">
+              <header>game_actions_pkg <em>«PACKAGE»</em></header>
+              <ul class="uml-ops">
+                <li>create_or_get_player() : player_t</li>
+                <li>move_player() : player_t</li>
+                <li>harvest_resource() : action_result_t</li>
+                <li>answer_sql_challenge() : action_result_t</li>
+                <li>deposit_resources() : action_result_t</li>
+              </ul>
+            </div>
+            <p class="uml-note">VALUE() + FOR UPDATE → méthode objet → UPDATE. Stats via triggers, classement via vue <code>game_leaderboard</code> (RANK()).</p>
+          </section>
+
+          <section class="uml-section">
+            <h3>Schéma relationnel (FK → game_players)</h3>
+            <div class="uml-er">
+              <div class="uml-class uml-class--pivot"><header>game_players</header><ul class="uml-attrs"><li>id PK</li></ul></div>
+              <div class="uml-er-children">
+                <div class="uml-class"><header>game_chests</header><ul class="uml-attrs"><li>owner FK · 0..1</li></ul></div>
+                <div class="uml-class"><header>game_player_quests</header><ul class="uml-attrs"><li>pseudo PK/FK · 0..1</li></ul></div>
+                <div class="uml-class"><header>game_sql_answers</header><ul class="uml-attrs"><li>pseudo PK/FK · 0..*</li></ul></div>
+                <div class="uml-class"><header>game_player_stats</header><ul class="uml-attrs"><li>pseudo PK/FK · 0..1</li></ul></div>
+              </div>
+              <p class="uml-note"><code>game_sql_challenges</code> 1..* <code>game_sql_answers</code> · <code>game_world_meta</code> isolée (seed).</p>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
 
     <script type="module" src="/src/main.js"></script>
   </body>

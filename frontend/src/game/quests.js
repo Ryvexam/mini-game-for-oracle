@@ -29,6 +29,17 @@ export function findInteraction(state) {
     });
   }
 
+  for (const chest of state.chests ?? []) {
+    candidates.push({
+      type: "chest",
+      id: chest.id,
+      label: "Déposer dans le coffre",
+      x: chest.x + 24,
+      y: chest.y + 24,
+      chest,
+    });
+  }
+
   return candidates
     .map((candidate) => ({ ...candidate, distance: distance(player, candidate) }))
     .filter((candidate) => candidate.distance <= INTERACTION_RANGE)
@@ -52,9 +63,12 @@ export function questTargetLabel(state) {
     const resource = nearestResource(state);
     return resource ? `Objectif : ressource au bloc ${blockX(resource.x)}, ${blockY(resource.y)}` : "";
   }
+  if (step.kind === "deposit") {
+    const chest = (state.chests ?? [])[0];
+    return chest ? `Objectif : coffre au bloc ${blockX(chest.x)}, ${blockY(chest.y)}` : "Objectif : trouve un coffre.";
+  }
   if (step.kind === "sql") {
-    const sage = state.npcs.find((item) => item.id === "sage-oracle");
-    return sage ? `Objectif : Sage Oracle au bloc ${blockX(sage.x)}, ${blockY(sage.y)}` : "";
+    return "Objectif : réponds au défi SQL (touches 1, 2, 3).";
   }
   return "";
 }

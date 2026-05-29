@@ -23,6 +23,20 @@ def test_schema_contains_game_oracle_object_features() -> None:
         assert snippet in SCHEMA
 
 
+def test_schema_defines_stats_triggers_and_view() -> None:
+    required = [
+        "CREATE TABLE game_player_stats",
+        "CREATE OR REPLACE TRIGGER trg_player_stats_create",
+        "CREATE OR REPLACE TRIGGER trg_player_stats_resources",
+        "CREATE OR REPLACE TRIGGER trg_player_stats_distance",
+        "CREATE OR REPLACE TRIGGER trg_player_stats_sql",
+        "CREATE OR REPLACE VIEW game_leaderboard",
+        "AFTER UPDATE OF wood, stone, ore ON game_players",
+    ]
+    for snippet in required:
+        assert snippet in SCHEMA
+
+
 def test_seed_contains_spawn_game_entities() -> None:
     assert "npc_t('sage-oracle'" in SEED
     assert "resource_node_t('spawn-rock-1'" in SEED

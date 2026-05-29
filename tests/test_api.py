@@ -27,9 +27,16 @@ def test_frontend_index_is_served() -> None:
 def test_multiplayer_websocket_broadcasts_presence() -> None:
     client = TestClient(app)
     with client.websocket_connect("/ws/game?pseudo=Alpha&skin_id=player") as alpha:
-        first = alpha.receive_json()
-        assert first["type"] == "presence"
-        alpha.send_json({"x": 96, "y": 144, "skin_id": "player"})
-        second = alpha.receive_json()
-        assert second["players"][0]["pseudo"] == "Alpha"
-        assert second["players"][0]["x"] == 96
+        presence = receive_until(alpha, "presence")
+        assert presence["players"][0]["pseudo"] == "Alpha"
+        alpha.send_json({"type": "move", "x": 96, "y": 144, "skin_id": "player"})
+        updated = receive_until(alpha, "presence")
+        assert updated["players"][0]["x"] == 96
+
+
+def receive_until(socket, message_type, attempts=8):
+    for _ in range(attempts):
+        message = socket.receive_json()
+        if message.get("type") == message_type:
+            return message
+    raise AssertionError(f"no {message_type} message received")

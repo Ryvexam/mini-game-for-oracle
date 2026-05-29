@@ -1,6 +1,24 @@
 SET DEFINE OFF
 
 BEGIN
+  EXECUTE IMMEDIATE 'DROP VIEW game_leaderboard';
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+/
+
+BEGIN
+  EXECUTE IMMEDIATE 'DROP TABLE game_player_stats PURGE';
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+/
+
+BEGIN
+  EXECUTE IMMEDIATE 'DROP TABLE game_sql_challenges PURGE';
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+/
+
+BEGIN
   EXECUTE IMMEDIATE 'DROP TABLE game_sql_answers PURGE';
 EXCEPTION WHEN OTHERS THEN NULL;
 END;
@@ -19,6 +37,12 @@ END;
 /
 
 BEGIN
+  EXECUTE IMMEDIATE 'DROP TABLE game_chests PURGE';
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+/
+
+BEGIN
   EXECUTE IMMEDIATE 'DROP TABLE game_npcs PURGE';
 EXCEPTION WHEN OTHERS THEN NULL;
 END;
@@ -26,6 +50,12 @@ END;
 
 BEGIN
   EXECUTE IMMEDIATE 'DROP TABLE game_players PURGE';
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+/
+
+BEGIN
+  EXECUTE IMMEDIATE 'DROP TABLE game_world_meta PURGE';
 EXCEPTION WHEN OTHERS THEN NULL;
 END;
 /
@@ -44,6 +74,12 @@ END;
 
 BEGIN
   EXECUTE IMMEDIATE 'DROP TYPE resource_node_t FORCE';
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+/
+
+BEGIN
+  EXECUTE IMMEDIATE 'DROP TYPE chest_t FORCE';
 EXCEPTION WHEN OTHERS THEN NULL;
 END;
 /
@@ -143,6 +179,47 @@ CREATE OR REPLACE TYPE action_result_t AS OBJECT (
 );
 /
 
+CREATE OR REPLACE TYPE chest_t AS OBJECT (
+  id VARCHAR2(80),
+  owner VARCHAR2(24),
+  x NUMBER,
+  y NUMBER,
+  wood NUMBER,
+  stone NUMBER,
+  ore NUMBER,
+  MEMBER PROCEDURE store(resource_kind VARCHAR2, qty NUMBER),
+  MEMBER FUNCTION total RETURN NUMBER
+);
+/
+
+CREATE OR REPLACE TYPE BODY chest_t AS
+  MEMBER PROCEDURE store(resource_kind VARCHAR2, qty NUMBER) IS
+  BEGIN
+    IF resource_kind = 'wood' THEN
+      wood := wood + qty;
+    ELSIF resource_kind = 'stone' THEN
+      stone := stone + qty;
+    ELSIF resource_kind = 'ore' THEN
+      ore := ore + qty;
+    END IF;
+  END;
+
+  MEMBER FUNCTION total RETURN NUMBER IS
+  BEGIN
+    RETURN NVL(wood, 0) + NVL(stone, 0) + NVL(ore, 0);
+  END;
+END;
+/
+
+CREATE TABLE game_world_meta (
+  id NUMBER PRIMARY KEY,
+  seed NUMBER NOT NULL
+);
+/
+
+INSERT INTO game_world_meta (id, seed) VALUES (1, 73244475);
+/
+
 CREATE TABLE game_players OF player_t (
   CONSTRAINT game_players_pk PRIMARY KEY (id)
 );
@@ -158,12 +235,30 @@ CREATE TABLE game_resource_nodes OF resource_node_t (
 );
 /
 
+CREATE TABLE game_chests OF chest_t (
+  CONSTRAINT game_chests_pk PRIMARY KEY (id),
+  CONSTRAINT game_chests_owner_fk FOREIGN KEY (owner) REFERENCES game_players(id)
+);
+/
+
 CREATE TABLE game_player_quests (
   pseudo VARCHAR2(24 CHAR) PRIMARY KEY,
   quest_id VARCHAR2(80) NOT NULL,
   step_index NUMBER DEFAULT 0 NOT NULL,
+  step_progress NUMBER DEFAULT 0 NOT NULL,
   updated_at TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL,
   CONSTRAINT game_player_quests_player_fk FOREIGN KEY (pseudo) REFERENCES game_players(id)
+);
+/
+
+CREATE TABLE game_sql_challenges (
+  id VARCHAR2(80) PRIMARY KEY,
+  prompt VARCHAR2(400) NOT NULL,
+  sql_code VARCHAR2(1000) NOT NULL,
+  choice_1 VARCHAR2(200) NOT NULL,
+  choice_2 VARCHAR2(200) NOT NULL,
+  choice_3 VARCHAR2(200) NOT NULL,
+  correct_index NUMBER NOT NULL
 );
 /
 
@@ -175,6 +270,97 @@ CREATE TABLE game_sql_answers (
   CONSTRAINT game_sql_answers_pk PRIMARY KEY (pseudo, challenge_id),
   CONSTRAINT game_sql_answers_player_fk FOREIGN KEY (pseudo) REFERENCES game_players(id)
 );
+/
+
+CREATE TABLE game_player_stats (
+  pseudo VARCHAR2(24 CHAR) PRIMARY KEY,
+  wood_gathered NUMBER DEFAULT 0 NOT NULL,
+  stone_gathered NUMBER DEFAULT 0 NOT NULL,
+  ore_gathered NUMBER DEFAULT 0 NOT NULL,
+  harvest_actions NUMBER DEFAULT 0 NOT NULL,
+  distance_moved NUMBER DEFAULT 0 NOT NULL,
+  sql_attempts NUMBER DEFAULT 0 NOT NULL,
+  sql_correct NUMBER DEFAULT 0 NOT NULL,
+  joined_at TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL,
+  updated_at TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL,
+  CONSTRAINT game_player_stats_player_fk FOREIGN KEY (pseudo) REFERENCES game_players(id)
+);
+/
+
+-- Create a stats row whenever a new player object is inserted.
+CREATE OR REPLACE TRIGGER trg_player_stats_create
+AFTER INSERT ON game_players
+FOR EACH ROW
+BEGIN
+  INSERT INTO game_player_stats (pseudo) VALUES (:NEW.id);
+END;
+/
+
+-- Accumulate gathered resources and harvest count from inventory growth.
+CREATE OR REPLACE TRIGGER trg_player_stats_resources
+AFTER UPDATE OF wood, stone, ore ON game_players
+FOR EACH ROW
+DECLARE
+  v_wood NUMBER := GREATEST(NVL(:NEW.wood, 0) - NVL(:OLD.wood, 0), 0);
+  v_stone NUMBER := GREATEST(NVL(:NEW.stone, 0) - NVL(:OLD.stone, 0), 0);
+  v_ore NUMBER := GREATEST(NVL(:NEW.ore, 0) - NVL(:OLD.ore, 0), 0);
+BEGIN
+  IF v_wood + v_stone + v_ore > 0 THEN
+    UPDATE game_player_stats
+    SET wood_gathered = wood_gathered + v_wood,
+        stone_gathered = stone_gathered + v_stone,
+        ore_gathered = ore_gathered + v_ore,
+        harvest_actions = harvest_actions + 1,
+        updated_at = SYSTIMESTAMP
+    WHERE pseudo = :NEW.id;
+  END IF;
+END;
+/
+
+-- Track total distance walked from position updates.
+CREATE OR REPLACE TRIGGER trg_player_stats_distance
+AFTER UPDATE OF x, y ON game_players
+FOR EACH ROW
+DECLARE
+  v_step NUMBER := SQRT(POWER(NVL(:NEW.x, 0) - NVL(:OLD.x, 0), 2)
+                      + POWER(NVL(:NEW.y, 0) - NVL(:OLD.y, 0), 2));
+BEGIN
+  IF v_step > 0 THEN
+    UPDATE game_player_stats
+    SET distance_moved = distance_moved + v_step,
+        updated_at = SYSTIMESTAMP
+    WHERE pseudo = :NEW.id;
+  END IF;
+END;
+/
+
+-- Count SQL challenge attempts and correct answers.
+CREATE OR REPLACE TRIGGER trg_player_stats_sql
+AFTER INSERT OR UPDATE ON game_sql_answers
+FOR EACH ROW
+BEGIN
+  UPDATE game_player_stats
+  SET sql_attempts = sql_attempts + 1,
+      sql_correct = sql_correct + NVL(:NEW.is_correct, 0),
+      updated_at = SYSTIMESTAMP
+  WHERE pseudo = :NEW.pseudo;
+END;
+/
+
+CREATE OR REPLACE VIEW game_leaderboard AS
+SELECT s.pseudo,
+       s.wood_gathered,
+       s.stone_gathered,
+       s.ore_gathered,
+       s.harvest_actions,
+       s.distance_moved,
+       s.sql_attempts,
+       s.sql_correct,
+       (s.wood_gathered + s.stone_gathered + s.ore_gathered) AS total_gathered,
+       RANK() OVER (
+         ORDER BY (s.wood_gathered + s.stone_gathered + s.ore_gathered) DESC
+       ) AS rank_position
+FROM game_player_stats s;
 /
 
 CREATE OR REPLACE PACKAGE game_actions_pkg AS
@@ -198,6 +384,11 @@ CREATE OR REPLACE PACKAGE game_actions_pkg AS
     p_pseudo VARCHAR2,
     p_challenge_id VARCHAR2,
     p_answer_index NUMBER
+  ) RETURN action_result_t;
+
+  FUNCTION deposit_resources(
+    p_pseudo VARCHAR2,
+    p_chest_id VARCHAR2
   ) RETURN action_result_t;
 END game_actions_pkg;
 /
@@ -297,14 +488,6 @@ CREATE OR REPLACE PACKAGE BODY game_actions_pkg AS
     SET amount = v_node.amount
     WHERE r.id = p_target_id;
 
-    UPDATE game_player_quests
-    SET step_index = CASE
-      WHEN quest_id = 'oracle-village-initiation' AND step_index = 1 THEN 2
-      ELSE step_index
-    END,
-    updated_at = SYSTIMESTAMP
-    WHERE pseudo = p_pseudo;
-
     RETURN action_result_t(1, 'Ressource récoltée.', v_resource, v_amount);
   END;
 
@@ -313,12 +496,21 @@ CREATE OR REPLACE PACKAGE BODY game_actions_pkg AS
     p_challenge_id VARCHAR2,
     p_answer_index NUMBER
   ) RETURN action_result_t IS
-    v_correct NUMBER;
+    v_correct NUMBER := 0;
+    v_expected NUMBER;
   BEGIN
-    v_correct := CASE
-      WHEN p_challenge_id = 'object-type-method' AND p_answer_index = 1 THEN 1
-      ELSE 0
+    BEGIN
+      SELECT correct_index INTO v_expected
+      FROM game_sql_challenges
+      WHERE id = p_challenge_id;
+    EXCEPTION
+      WHEN NO_DATA_FOUND THEN
+        RETURN action_result_t(0, 'Défi SQL inconnu.', NULL, 0);
     END;
+
+    IF p_answer_index = v_expected THEN
+      v_correct := 1;
+    END IF;
 
     UPDATE game_sql_answers
     SET is_correct = v_correct,
@@ -332,15 +524,61 @@ CREATE OR REPLACE PACKAGE BODY game_actions_pkg AS
     END IF;
 
     IF v_correct = 1 THEN
-      UPDATE game_player_quests
-      SET step_index = 3,
-          updated_at = SYSTIMESTAMP
-      WHERE pseudo = p_pseudo
-        AND quest_id = 'oracle-village-initiation';
-      RETURN action_result_t(1, 'Bonne réponse SQL. Quête terminée.', NULL, 0);
+      RETURN action_result_t(1, 'Bonne réponse SQL.', NULL, 0);
     END IF;
 
     RETURN action_result_t(0, 'Mauvaise réponse SQL. Relis le code.', NULL, 0);
+  END;
+
+  FUNCTION deposit_resources(
+    p_pseudo VARCHAR2,
+    p_chest_id VARCHAR2
+  ) RETURN action_result_t IS
+    v_player player_t;
+    v_chest chest_t;
+    v_total NUMBER;
+  BEGIN
+    SELECT VALUE(p) INTO v_player
+    FROM game_players p
+    WHERE p.id = p_pseudo
+    FOR UPDATE;
+
+    BEGIN
+      SELECT VALUE(c) INTO v_chest
+      FROM game_chests c
+      WHERE c.id = p_chest_id
+      FOR UPDATE;
+    EXCEPTION
+      WHEN NO_DATA_FOUND THEN
+        RETURN action_result_t(0, 'Coffre introuvable.', NULL, 0);
+    END;
+
+    v_total := NVL(v_player.wood, 0) + NVL(v_player.stone, 0) + NVL(v_player.ore, 0);
+    IF v_total <= 0 THEN
+      RETURN action_result_t(0, 'Rien à déposer.', NULL, 0);
+    END IF;
+
+    v_chest.store('wood', NVL(v_player.wood, 0));
+    v_chest.store('stone', NVL(v_player.stone, 0));
+    v_chest.store('ore', NVL(v_player.ore, 0));
+
+    UPDATE game_chests c
+    SET wood = v_chest.wood,
+        stone = v_chest.stone,
+        ore = v_chest.ore
+    WHERE c.id = p_chest_id;
+
+    v_player.wood := 0;
+    v_player.stone := 0;
+    v_player.ore := 0;
+
+    UPDATE game_players p
+    SET wood = 0,
+        stone = 0,
+        ore = 0
+    WHERE p.id = p_pseudo;
+
+    RETURN action_result_t(1, 'Objets déposés dans le coffre.', NULL, v_total);
   END;
 END game_actions_pkg;
 /

@@ -27,7 +27,7 @@ const IMAGE_ASSETS = {
   objects: {
     tree: "/assets/generated/objects/tree.png",
     rock: "/assets/generated/objects/rock.png",
-    ore: "/assets/generated/objects/rock.png",
+    ore: "/assets/generated/objects/ore_geode.png",
     type_forge: "/assets/generated/objects/type_forge.png",
     method_dojo: "/assets/generated/objects/method_dojo.png",
     object_village: "/assets/generated/objects/object_village.png",
@@ -42,17 +42,20 @@ const IMAGE_ASSETS = {
     interaction_prompt: "/assets/generated/ui/interaction_prompt.png",
   },
   animations: {
-    player_mining: "/assets/generated/sprites/player_mining.gif",
-    living_being_mining: "/assets/generated/sprites/living_being_mining.gif",
-    human_mining: "/assets/generated/sprites/human_mining.gif",
-    monkey_mining: "/assets/generated/sprites/monkey_mining.gif",
-    lynx_mining: "/assets/generated/sprites/lynx_mining.gif",
-    oracle_sage_mining: "/assets/generated/sprites/oracle_sage_mining.gif",
-    ref_spirit_mining: "/assets/generated/sprites/ref_spirit_mining.gif",
-    collection_keeper_mining: "/assets/generated/sprites/collection_keeper_mining.gif",
-    final_guardian_mining: "/assets/generated/sprites/final_guardian_mining.gif",
+    player_mining: "/assets/generated/sprites/player_mining_sheet.png",
+    living_being_mining: "/assets/generated/sprites/living_being_mining_sheet.png",
+    human_mining: "/assets/generated/sprites/human_mining_sheet.png",
+    monkey_mining: "/assets/generated/sprites/monkey_mining_sheet.png",
+    lynx_mining: "/assets/generated/sprites/lynx_mining_sheet.png",
+    oracle_sage_mining: "/assets/generated/sprites/oracle_sage_mining_sheet.png",
+    ref_spirit_mining: "/assets/generated/sprites/ref_spirit_mining_sheet.png",
+    collection_keeper_mining: "/assets/generated/sprites/collection_keeper_mining_sheet.png",
+    final_guardian_mining: "/assets/generated/sprites/final_guardian_mining_sheet.png",
   },
 };
+
+export const MINING_FRAMES = 18;
+export const MINING_DURATION_MS = 1000;
 
 function loadImage(src) {
   return new Promise((resolve, reject) => {
